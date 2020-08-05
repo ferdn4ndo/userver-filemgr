@@ -1,0 +1,27 @@
+version: '3'
+services:
+  userver-filemgr:
+    container_name: userver-filemgr
+    restart: unless-stopped
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - ./filemgr:/code/filemgr
+      - ./local:/storages/local
+      - ./logs:/code/logs
+      - ./tmp:/tmp
+      - ./static:/code/static
+      - ./templates:/code/templates
+      - ./manage.py:/code/manage.py
+      - ./entrypoint.sh:/code/entrypoint.sh
+      - ./setup.sh:/code/setup.sh
+    expose:
+      - 9905
+    env_file:
+      - .env
+
+networks:
+  default:
+    external:
+      name: nginx-proxy
