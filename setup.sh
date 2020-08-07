@@ -2,12 +2,16 @@
 
 echo "WARNING: THIS PROCESS WILL DESTROY ANY EXISTING USERVER-FILEMGR DATABASE!"
 echo "THIS IS IRREVERSIBLE!"
-read -p "ARE YOU SURE YOU WANT TO CONTINUE? [y/N] " -n 1 -r
-echo # (optional) move to a new line
-if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-  echo "Yeah, it's pretty dangerous, u know? Aborting..."
-  [[ "$0" == "$BASH_SOURCE" ]] && exit 1 || return 1 # handle exits from shell or function but don't exit interactive shell
-fi
+echo "Database destroy countdown: 5s (press Ctrl+C to cancel)"
+sleep 1s
+echo "Database destroy countdown: 4s (press Ctrl+C to cancel)"
+sleep 1s
+echo "Database destroy countdown: 3s (press Ctrl+C to cancel)"
+sleep 1s
+echo "Database destroy countdown: 2s (press Ctrl+C to cancel)"
+sleep 1s
+echo "Database destroy countdown: 1s (press Ctrl+C to cancel)"
+sleep 1s
 
 echo "Reseting DB..."
 
