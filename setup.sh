@@ -2,22 +2,9 @@
 
 echo "WARNING: THIS PROCESS WILL DESTROY ANY EXISTING USERVER-FILEMGR DATABASE!"
 echo "THIS IS IRREVERSIBLE!"
-echo "Database destroy countdown: 5s (press Ctrl+C to cancel)"
-sleep 1s
-echo "Database destroy countdown: 4s (press Ctrl+C to cancel)"
-sleep 1s
-echo "Database destroy countdown: 3s (press Ctrl+C to cancel)"
-sleep 1s
-echo "Database destroy countdown: 2s (press Ctrl+C to cancel)"
-sleep 1s
-echo "Database destroy countdown: 1s (press Ctrl+C to cancel)"
-sleep 1s
 
-echo "WARNING: THIS PROCESS WILL DESTROY ANY EXISTING USERVER-FILEMGR DATABASE!"
-echo "THIS IS IRREVERSIBLE!"
-
-if [[ $USERVER_MODE != "dev" ]]; then
-  echo "!!!!! YOU ARE UNDER PRODUCTION ENVIRONMENT !!!!!"
+if [[ $ENV_MODE != "dev" ]]; then
+  echo "!!!!! YOU ARE NOT UNDER A DEVELOPMENT ENVIRONMENT !!!!!"
   read -p "Are you sure you want to continue? (LAST CHANCE!)" -n 1 -r
   echo    # (optional) move to a new line
   if [[ ! $REPLY =~ ^[Yy]$ ]]; then
