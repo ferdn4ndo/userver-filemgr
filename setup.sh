@@ -13,6 +13,19 @@ sleep 1s
 echo "Database destroy countdown: 1s (press Ctrl+C to cancel)"
 sleep 1s
 
+echo "WARNING: THIS PROCESS WILL DESTROY ANY EXISTING USERVER-FILEMGR DATABASE!"
+echo "THIS IS IRREVERSIBLE!"
+
+if [[ $USERVER_MODE != "dev" ]]; then
+  echo "!!!!! YOU ARE UNDER PRODUCTION ENVIRONMENT !!!!!"
+  read -p "Are you sure you want to continue? (LAST CHANCE!)" -n 1 -r
+  echo    # (optional) move to a new line
+  if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+      [[ "$0" = "$BASH_SOURCE" ]] && exit 1 || return 1 # handle exits from shell or function but don't exit interactive shell
+  fi
+fi
+
+
 echo "Reseting DB..."
 
 PGPASSWORD=${POSTGRES_ROOT_PASS} psql -h "${POSTGRES_HOST}" -U "${POSTGRES_ROOT_USER}" -p "${POSTGRES_PORT}" <<EOF
