@@ -57,10 +57,8 @@ mkdir -p "${LOCAL_TEST_STORAGE_ROOT}"
 
 echo "Creating auth system"
 
-[[ -z "${LETSENCRYPT_HOST}" ]] && protocol="http" || protocol="https"
-
 system_resp=$(
-  curl -sS -X POST "${protocol}://${USERVER_AUTH_HOST}/auth/system" \
+  curl -sS -X POST "http://${USERVER_AUTH_HOST}/auth/system" \
     -H "Authorization: Token ${USERVER_AUTH_SYSTEM_CREATION_TOKEN}" \
     -H "Content-Type: application/json" \
     --data @- <<END
@@ -76,7 +74,7 @@ echo "${system_resp}"
 echo "Creating auth user"
 
 reg_resp=$(
-  curl -sS -X POST "${protocol}://${USERVER_AUTH_HOST}/auth/register" \
+  curl -sS -X POST "http://${USERVER_AUTH_HOST}/auth/register" \
     -H "Content-Type: application/json" \
     --data @- <<END
 {
@@ -93,7 +91,7 @@ echo "Register response:"
 echo "${reg_resp}"
 
 login_resp=$(
-  curl -sS -X POST "${protocol}://${USERVER_AUTH_HOST}/auth/login" \
+  curl -sS -X POST "http://${USERVER_AUTH_HOST}/auth/login" \
     -H "Content-Type: application/json" \
     --data @- <<END
 {
