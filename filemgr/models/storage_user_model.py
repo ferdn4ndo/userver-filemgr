@@ -50,8 +50,8 @@ class StorageUser(GenericModel):
     @staticmethod
     def userMayWriteStorage(user: CustomUser, storage: Storage) -> bool:
         """
-        Check if a given user has permission to read a storage. Returns false if no record was found or if any of the
-        existing ones have may_read="False" (fail-safe)
+        Check if a given user has permission to write to a storage. Returns false if no record was found or if any of
+        the existing ones have may_read="False" (fail-safe)
         :param user:
         :param storage:
         :return:

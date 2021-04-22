@@ -21,9 +21,9 @@ class UServerAuthentication(authentication.BaseAuthentication):
     Clients should authenticate by passing the token key in the "Authorization" HTTP header, prepended with the
     string "Token ".  For example:
 
-    Authorization: Token 401f7ac837da42b97f613d789819ff93537bee6a
+    Authorization: Bearer 401f7ac837da42b97f613d789819ff93537bee6a
     """
-    keyword = 'Token'
+    keyword = 'Bearer'
 
     def authenticate(self, request: http.request) -> [Tuple]:
         """
@@ -120,10 +120,7 @@ class UServerAuthentication(authentication.BaseAuthentication):
         Generates the route to uServer-Auth
         :return: str The route
         """
-        protocol = 'http'
-        if 'LETSENCRYPT_HOST' in os.environ:
-            protocol = 'https'
-        return '{}://{}/auth/{}'.format(protocol, os.environ['USERVER_AUTH_HOST'], endpoint)
+        return '{}/auth/{}'.format(os.environ['USERVER_AUTH_HOST'], endpoint)
 
     def authenticate_header(self, request):
         """

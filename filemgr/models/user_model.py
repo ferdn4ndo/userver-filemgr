@@ -1,6 +1,7 @@
 from uuid import uuid4
 
 from django.contrib.auth.base_user import BaseUserManager, AbstractBaseUser
+from django.contrib.auth.models import PermissionsMixin
 from django.db import models
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
@@ -40,7 +41,7 @@ class CustomUserManager(BaseUserManager):
         return self.create_user(uuid, token, **extra_fields)
 
 
-class CustomUser(AbstractBaseUser):
+class CustomUser(AbstractBaseUser, PermissionsMixin):
     """
     Users within the uServer authentication system are represented by this model.
     UUID is required. Other fields are optional.

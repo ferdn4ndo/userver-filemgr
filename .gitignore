@@ -4,8 +4,8 @@ __pycache__/
 *$py.class
 
 # Temp files
-temp/*
-!temp/.gitkeep
+tmp/*
+!tmp/.gitkeep
 
 # Log files
 logs/*
