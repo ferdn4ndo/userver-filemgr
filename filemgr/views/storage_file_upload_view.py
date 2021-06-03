@@ -6,7 +6,7 @@ from rest_framework.request import Request
 from rest_framework.response import Response
 
 from filemgr.drivers import load_storage_driver
-from filemgr.models import Storage, StorageUser
+from filemgr.models import Storage, StorageFile, StorageUser
 from filemgr.serializers import StorageFileSerializer, StorageFileUploadSerializer, StorageFileUploadUrlSerializer
 from filemgr.services import policy
 from filemgr.services.translation import Messages
@@ -21,21 +21,15 @@ class StorageFileUploadView(viewsets.ViewSet):
             return Response({'message': Messages.MSG_MISSING_FILE_FIELD_FORM}, status=status.HTTP_400_BAD_REQUEST)
         request_file = request.FILES['file']
 
-        serializer = StorageFileUploadSerializer(data=request.POST)
-        serializer.is_valid(raise_exception=True)
-
         storage = get_object_or_404(Storage.objects.all(), id=storage_id)
         if not StorageUser.userMayWriteStorage(request.user, storage):
             return Response({'message': Messages.MSG_NO_STORAGE_WRITE_PERM}, status=status.HTTP_403_FORBIDDEN)
 
         driver = load_storage_driver(storage)
-        data = serializer.validated_data
         file = driver.upload_from_request_file(
             user=request.user,
             request_file=request_file,
-            virtual_path=data['virtual_path'],
-            overwrite=data['overwrite'],
-            visibility=data['visibility'],
+            visibility=StorageFile.FileVisibility.SYSTEM,
         )
 
         file_serializer = StorageFileSerializer(file)

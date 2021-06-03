@@ -136,7 +136,8 @@ class GenericDriver(ABC):
         if virtual_path == "":
             file.virtual_filepath = self.generate_virtual_path(path, is_url=is_url)
 
-        self.check_if_virtual_path_exists(file.virtual_filepath)
+        # Check if the virtual_path (where the file should be uploaded) doesn't already exists
+        self.check_if_virtual_path_exists(file.virtual_filepath, raise_ex_if_yes=not overwrite)
 
         # Call the appropriate file metadata reader to update the model
         if is_url:
@@ -145,8 +146,7 @@ class GenericDriver(ABC):
             self.update_file_info_from_local(file=file, local_path=path)
         file.save()
 
-        # Check if the virtual_path (where the file should be uploaded) doesn't already exists
-        self.check_if_virtual_path_exists(file.virtual_filepath, raise_ex_if_yes=not overwrite)
+        self.check_if_virtual_path_exists(file.virtual_filepath, raise_ex_if_no=True)
 
         # Perform the upload by calling the appropriate method
         file_real_path = self.get_real_remote_path(file)
@@ -283,7 +283,7 @@ class GenericDriver(ABC):
             )
         if virtual_path_exists_bool and raise_ex_if_yes:
             raise FileExistsError(
-                _("The file path '{}' should remotely exists and wasn't found.").format(virtual_path)
+                _("The file path '{}' should not remotely exists but it does.").format(virtual_path)
             )
         return virtual_path_exists_bool
 
