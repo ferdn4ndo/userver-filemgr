@@ -77,7 +77,7 @@ class StorageFileDownload(GenericModel):
         return self.created_at + datetime.timedelta(seconds=secs)
 
 
-class DownloadHit(models.Model):
+class DownloadHit(GenericModel):
     """
     Represents a download hit (every access to a download should create a record here)
     """

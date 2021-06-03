@@ -1,4 +1,6 @@
 import os
+import datetime
+
 from rest_framework.utils import json
 from typing import Tuple
 
@@ -21,9 +23,9 @@ class UServerAuthentication(authentication.BaseAuthentication):
     Clients should authenticate by passing the token key in the "Authorization" HTTP header, prepended with the
     string "Token ".  For example:
 
-    Authorization: Token 401f7ac837da42b97f613d789819ff93537bee6a
+    Authorization: Bearer 401f7ac837da42b97f613d789819ff93537bee6a
     """
-    keyword = 'Token'
+    keyword = 'Bearer'
 
     def authenticate(self, request: http.request) -> [Tuple]:
         """
@@ -62,7 +64,7 @@ class UServerAuthentication(authentication.BaseAuthentication):
             url=auth_url,
             method='GET',
             headers={
-                'Authorization': 'Token {}'.format(token)
+                'Authorization': 'Bearer {}'.format(token)
             }
         )
         return request.get_json_response()
@@ -75,6 +77,10 @@ class UServerAuthentication(authentication.BaseAuthentication):
         """
         try:
             user_token = UserToken.objects.get(token=token)
+
+            if user_token.expires_at.astimezone(timezone.utc).replace(tzinfo=None) < datetime.datetime.utcnow():
+                raise exceptions.AuthenticationFailed(_("The authentication token has expired. Please log-in again or use the refresh token to retrieve a new one."))
+
             return user_token.user, token
         except UserToken.DoesNotExist:
             pass
@@ -120,10 +126,7 @@ class UServerAuthentication(authentication.BaseAuthentication):
         Generates the route to uServer-Auth
         :return: str The route
         """
-        protocol = 'http'
-        if 'LETSENCRYPT_HOST' in os.environ:
-            protocol = 'https'
-        return '{}://{}/auth/{}'.format(protocol, os.environ['USERVER_AUTH_HOST'], endpoint)
+        return '{}/auth/{}'.format(os.environ['USERVER_AUTH_HOST'], endpoint)
 
     def authenticate_header(self, request):
         """
@@ -177,5 +180,3 @@ class UServerAuthentication(authentication.BaseAuthentication):
             raise exceptions.AuthenticationFailed(_("Failed to login with user."))
 
         return UServerAuthentication.create_user_from_response_data(login_response_data)
-
-

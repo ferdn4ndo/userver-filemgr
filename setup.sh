@@ -39,11 +39,10 @@ PGPASSWORD=${POSTGRES_ROOT_PASS} psql -h "${POSTGRES_HOST}" -U "${POSTGRES_ROOT_
 EOF
 
 echo "Reseting migrations"
-#python manage.py flush --noinput
-rm -f /code/filemgr/migrations/*.py
+ls /code/filemgr/migrations | grep -E "^[0-9]{4}_[0-9a-zA-Z_-]+.py$" | xargs -I STR rm /code/filemgr/migrations/STR
 
-python manage.py makemigrations filemgr
-python manage.py migrate filemgr
+python manage.py makemigrations
+python manage.py migrate
 
 echo "Migrating..."
 python manage.py migrate --run-syncdb
@@ -58,7 +57,7 @@ mkdir -p "${LOCAL_TEST_STORAGE_ROOT}"
 echo "Creating auth system"
 
 system_resp=$(
-  curl -sS -X POST "http://${USERVER_AUTH_HOST}/auth/system" \
+  curl -sS -X POST "${USERVER_AUTH_HOST}/auth/system" \
     -H "Authorization: Token ${USERVER_AUTH_SYSTEM_CREATION_TOKEN}" \
     -H "Content-Type: application/json" \
     --data @- <<END
@@ -74,7 +73,7 @@ echo "${system_resp}"
 echo "Creating auth user"
 
 reg_resp=$(
-  curl -sS -X POST "http://${USERVER_AUTH_HOST}/auth/register" \
+  curl -sS -X POST "${USERVER_AUTH_HOST}/auth/register" \
     -H "Content-Type: application/json" \
     --data @- <<END
 {
@@ -91,7 +90,7 @@ echo "Register response:"
 echo "${reg_resp}"
 
 login_resp=$(
-  curl -sS -X POST "http://${USERVER_AUTH_HOST}/auth/login" \
+  curl -sS -X POST "${USERVER_AUTH_HOST}/auth/login" \
     -H "Content-Type: application/json" \
     --data @- <<END
 {

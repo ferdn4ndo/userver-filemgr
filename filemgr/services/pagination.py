@@ -73,22 +73,31 @@ class CustomPagination(LimitOffsetPagination):
         }
 
     def get_pagination_links(self):
-        return OrderedDict([
-            (self.KEY_LINKS_SELF, self.get_self_link()),
-            (self.KEY_LINKS_NEXT, self.get_next_link()),
-            (self.KEY_LINKS_PREVIOUS, self.get_previous_link()),
-        ])
+        links = {
+            **self.get_self_link(),
+            **self.get_next_link(),
+            **self.get_previous_link(),
+        }
+        return links
 
     def get_next_link(self):
         next_url = super(CustomPagination, self).get_next_link()
-        return {self.KEY_LINKS_HREF: next_url}
+
+        if not next_url:
+            return {}
+
+        return {self.KEY_LINKS_NEXT: {self.KEY_LINKS_HREF: next_url}}
 
     def get_previous_link(self):
         previous_url = super(CustomPagination, self).get_next_link()
-        return {self.KEY_LINKS_HREF: previous_url}
+
+        if not previous_url:
+            return {}
+
+        return {self.KEY_LINKS_PREVIOUS: {self.KEY_LINKS_HREF: previous_url}}
 
     def get_self_link(self):
-        return {self.KEY_LINKS_HREF: self.request.build_absolute_uri()}
+        return {self.KEY_LINKS_SELF: {self.KEY_LINKS_HREF: self.request.build_absolute_uri()}}
 
 
 class LargeResultsSetPagination(CustomPagination):
