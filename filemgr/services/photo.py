@@ -50,10 +50,12 @@ def get_sign_from_image(source_image: Union[str, IO[bytes]]) -> Dict:
 def get_image_exif(image_path: str) -> Dict:
     ret = {}
     image = Image.open(image_path)
+
     info = image._getexif()
-    for tag, value in info.items():
-        decoded = TAGS.get(tag, tag)
-        ret[decoded] = value
+    if info:
+        for tag, value in info.items():
+            decoded = TAGS.get(tag, tag)
+            ret[decoded] = value
 
     ret['IMAGE_WIDTH'], ret['IMAGE_HEIGHT'] = image.size
     return ret

@@ -13,6 +13,7 @@ from filemgr.errors import UnexpectedCondition
 from filemgr.models.storage_file_model import StorageFile, StorageFileMimeType
 from filemgr.models.storage_model import Storage
 from filemgr.models.user_model import CustomUser
+from filemgr.services.photo import get_image_information
 from filemgr.services.file import generate_file_hash, save_from_memory
 from filemgr.services.web_request import WebRequest
 
@@ -370,8 +371,13 @@ class GenericDriver(ABC):
         file.size = int(Path(local_path).stat().st_size)
         mime = magic.Magic(mime=True)
         guessed_mime = mime.from_file(local_path)
+
         if guessed_mime is not None:
             file.type = StorageFileMimeType.from_mime_type(guessed_mime)
+
+        if file.type and file.type.generic_type == StorageFileMimeType.GenericTypes.IMAGE:
+            file.metadata = get_image_information(local_path)
+
         file.origin = StorageFile.FileOrigin.LOCAL
         file.original_filename = os.path.split(local_path)[1]
         file.original_path = local_path
