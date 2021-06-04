@@ -117,7 +117,7 @@ class StorageFile(GenericModel):
         null=True,
         verbose_name=_("Either the original URL of the file (if remotely downloaded) or the file path (if uploaded)"),
     )
-    real_filepath = models.CharField(
+    real_path = models.CharField(
         max_length=1024,
         null=True,
         validators=[
@@ -130,7 +130,7 @@ class StorageFile(GenericModel):
         ],
         verbose_name=_("The real remote filepath of the stored file"),
     )
-    virtual_filepath = models.CharField(
+    virtual_path = models.CharField(
         max_length=1024,
         null=True,
         validators=[
@@ -165,7 +165,7 @@ class StorageFile(GenericModel):
         Retrieves the string representation of the class
         :return:
         """
-        return "<File {} #{}>".format(self.virtual_filepath, self.id)
+        return "<File {} #{}>".format(self.virtual_path, self.id)
 
     def get_temp_file_path(self) -> str:
         """
@@ -179,7 +179,7 @@ class StorageFile(GenericModel):
         Retrieves the filename base on the file virtual path (last part of a '/' explosion)
         :return:
         """
-        return str(self.virtual_filepath).split("/")[-1]
+        return str(self.virtual_path).split("/")[-1]
 
     def is_visible_by_user(self, user: CustomUser):
         """

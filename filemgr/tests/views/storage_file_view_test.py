@@ -76,12 +76,12 @@ class StorageFileViewSetPartialUpdateTest(generic.GenericPartialUpdateTestCase.P
             'metadata': {
                 'language': 'en-us'
             },
-            'virtual_filepath': 'test/file1.txt'
+            'virtual_path': 'test/file1.txt'
         }
         self.payload_invalid = {
             'visibility': 'aaaaa',
             'metadata': 123,
-            'virtual_filepath': 0,
+            'virtual_path': 0,
         }
 
         self.storage_user = dataset.create_storage_user(storage=self.storage, user=self.user, creator=self.user)

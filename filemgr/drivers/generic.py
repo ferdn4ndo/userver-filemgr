@@ -131,11 +131,11 @@ class GenericDriver(ABC):
         file.visibility = visibility
         file.original_path = original_path
         file.owner = user
-        file.virtual_filepath = self.generate_virtual_path(file, virtual_path=virtual_path, is_url=is_url)
-        file.real_filepath = self.generate_real_path(file)
+        file.virtual_path = self.generate_virtual_path(file, virtual_path=virtual_path, is_url=is_url)
+        file.real_path = self.generate_real_path(file)
 
         # Check if the virtual_path (where the file should be uploaded) doesn't already exists
-        self.check_if_virtual_path_exists(file.virtual_filepath, raise_ex_if_yes=not overwrite)
+        self.check_if_virtual_path_exists(file.virtual_path, raise_ex_if_yes=not overwrite)
 
         # Call the appropriate file metadata reader to update the model
         if is_url:
@@ -144,7 +144,7 @@ class GenericDriver(ABC):
             self.update_file_info_from_local(file=file, local_path=path)
         file.save()
 
-        self.check_if_virtual_path_exists(file.virtual_filepath, raise_ex_if_no=True)
+        self.check_if_virtual_path_exists(file.virtual_path, raise_ex_if_no=True)
 
         # Perform the upload by calling the appropriate method
         file_real_path = self.get_real_remote_path(file)
@@ -154,7 +154,7 @@ class GenericDriver(ABC):
             self.perform_upload_from_path(local_path=path, remote_path=file_real_path)
 
         # Check if the file was really uploaded
-        self.check_if_virtual_path_exists(file.virtual_filepath, raise_ex_if_no=True)
+        self.check_if_virtual_path_exists(file.virtual_path, raise_ex_if_no=True)
 
         file.status = StorageFile.FileStatus.QUEUED
         file.save()
@@ -248,7 +248,7 @@ class GenericDriver(ABC):
         """
         file_count = StorageFile.objects.filter(
             storage=self.storage,
-            virtual_filepath=virtual_path,
+            virtual_path=virtual_path,
             excluded=False,
             available=True
         ).count()

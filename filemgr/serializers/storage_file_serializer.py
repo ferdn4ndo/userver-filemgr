@@ -31,6 +31,7 @@ class StorageFileSerializer(serializers.ModelSerializer):
     type = StorageFileMimeTypeSerializer(read_only=True)
     origin = serializers.ReadOnlyField()
     original_path = serializers.ReadOnlyField()
+    real_path = serializers.ReadOnlyField()
     available = serializers.ReadOnlyField()
     excluded = serializers.ReadOnlyField()
 
@@ -49,8 +50,8 @@ class StorageFileSerializer(serializers.ModelSerializer):
             'metadata',
             'origin',
             'original_path',
-            'real_filepath',
-            'virtual_filepath',
+            'real_path',
+            'virtual_path',
             'available',
             'excluded',
             'created_by',
