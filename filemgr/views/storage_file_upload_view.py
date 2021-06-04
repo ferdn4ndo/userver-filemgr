@@ -25,11 +25,17 @@ class StorageFileUploadView(viewsets.ViewSet):
         if not StorageUser.userMayWriteStorage(request.user, storage):
             return Response({'message': Messages.MSG_NO_STORAGE_WRITE_PERM}, status=status.HTTP_403_FORBIDDEN)
 
+        serializer = StorageFileUploadSerializer(data=request.POST)
+        serializer.is_valid(raise_exception=True)
+
         driver = load_storage_driver(storage)
+        data = serializer.validated_data
         file = driver.upload_from_request_file(
             user=request.user,
             request_file=request_file,
-            visibility=StorageFile.FileVisibility.SYSTEM,
+            visibility=data['visibility'],
+            virtual_path=data['virtual_path'],
+            overwrite=data['overwrite'],
         )
 
         file_serializer = StorageFileSerializer(file)

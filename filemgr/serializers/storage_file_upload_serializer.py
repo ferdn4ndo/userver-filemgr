@@ -4,7 +4,7 @@ from filemgr.models.storage_file_model import StorageFile
 
 
 class StorageFileUploadSerializer(serializers.Serializer):
-    virtual_path = serializers.CharField(max_length=1024)
+    virtual_path = serializers.CharField(max_length=1024, default="")
     overwrite = serializers.BooleanField(default=False)
     visibility = serializers.ChoiceField(
         choices=StorageFile.FileVisibility.choices,

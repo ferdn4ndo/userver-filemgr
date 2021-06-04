@@ -49,6 +49,7 @@ class StorageFileSerializer(serializers.ModelSerializer):
             'metadata',
             'origin',
             'original_path',
+            'real_filepath',
             'virtual_filepath',
             'available',
             'excluded',

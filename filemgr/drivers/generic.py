@@ -130,11 +130,8 @@ class GenericDriver(ABC):
         file.visibility = visibility
         file.original_path = original_path
         file.owner = user
-
-        # Generate the virtual path in case it wasn't provided
-        file.virtual_filepath = virtual_path
-        if virtual_path == "":
-            file.virtual_filepath = self.generate_virtual_path(file, is_url=is_url)
+        file.virtual_filepath = self.generate_virtual_path(file, virtual_path=virtual_path, is_url=is_url)
+        file.real_filepath = self.generate_real_path(file)
 
         # Check if the virtual_path (where the file should be uploaded) doesn't already exists
         self.check_if_virtual_path_exists(file.virtual_filepath, raise_ex_if_yes=not overwrite)
@@ -338,24 +335,30 @@ class GenericDriver(ABC):
 
         return file
 
-    def generate_virtual_path(self, file: StorageFile, subfolder: str = '/', filename: str = None, is_url: bool = False):
+    def generate_virtual_path(self, file: StorageFile, virtual_path: str = None, is_url: bool = False):
         """
-        Generate a remote virtual path for a given subfolder and file
-        :param filename: The filename to be used. Will default to the one from the path
-        :param path: The filepath/url to base the filename (if auto)
-        :param subfolder: the subfolder (inside remote root) where the file will exists
+        Generate a remote virtual path for a given file
+        :param file: The file resource being populated
+        :param virtual_path: The filepath/url to base the filename (if auto)
         :param is_url: if its an url (true) or a filepath (false)
         :return:
         """
-        if filename is None:
-            return os.path.join(self.get_remote_root_path(), subfolder, str(file.id))
+        if virtual_path is None or virtual_path == "":
+            return file.id
 
         if is_url:
-            url_parser = urlparse(filename)
-            base_filename = os.path.basename(url_parser.path)
-            return os.path.join(self.get_remote_root_path(), subfolder, base_filename)
+            url_parser = urlparse(virtual_path)
+            return os.path.basename(url_parser.path)
 
-        return os.path.join(self.get_remote_root_path(), subfolder, Path(filename).name)
+        return virtual_path
+
+    def generate_real_path(self, file: StorageFile) -> str:
+        """
+        Generate a remote real path for a given file
+        :param file: The file resource being populated
+        :return:
+        """
+        return os.path.join(self.get_remote_root_path(), str(file.id))
 
     @staticmethod
     def update_file_info_from_local(file: StorageFile, local_path: str):

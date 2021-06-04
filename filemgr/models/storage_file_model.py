@@ -117,14 +117,32 @@ class StorageFile(GenericModel):
         null=True,
         verbose_name=_("Either the original URL of the file (if remotely downloaded) or the file path (if uploaded)"),
     )
-    virtual_filepath = models.CharField(max_length=1024, null=True, validators=[
-        RegexValidator(
-            regex=r'^\/?([\w\.\_-]+\/)*[\w\.\_-]+$',
-            message=Messages.MGS_INVALID_PATH,
-            code='invalid_filepath',
-            flags=re.UNICODE,
-        ),
-    ])
+    real_filepath = models.CharField(
+        max_length=1024,
+        null=True,
+        validators=[
+            RegexValidator(
+                regex=r'^\/?([\w\.\_-]+\/)*[\w\.\_-]+$',
+                message=Messages.MGS_INVALID_PATH,
+                code='invalid_filepath',
+                flags=re.UNICODE,
+            )
+        ],
+        verbose_name=_("The real remote filepath of the stored file"),
+    )
+    virtual_filepath = models.CharField(
+        max_length=1024,
+        null=True,
+        validators=[
+            RegexValidator(
+                regex=r'^\/?([\w\.\_-]+\/)*[\w\.\_-]+$',
+                message=Messages.MGS_INVALID_PATH,
+                code='invalid_filepath',
+                flags=re.UNICODE,
+            ),
+        ],
+        verbose_name=_("The virtual remote filepath of the stored file"),
+    )
     available = models.BooleanField(default=True, verbose_name=_("If the file is remotely available"))
     excluded = models.BooleanField(default=False, verbose_name=_("If the file was marked as excluded in the interface"))
     created_by = models.ForeignKey(
