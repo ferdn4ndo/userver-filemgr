@@ -30,13 +30,17 @@ class StorageFileUploadView(viewsets.ViewSet):
 
         driver = load_storage_driver(storage)
         data = serializer.validated_data
-        file = driver.upload_from_request_file(
-            user=request.user,
-            request_file=request_file,
-            visibility=data['visibility'],
-            virtual_path=data['virtual_path'],
-            overwrite=data['overwrite'],
-        )
+
+        try:
+            file = driver.upload_from_request_file(
+                user=request.user,
+                request_file=request_file,
+                visibility=data['visibility'],
+                virtual_path=data['virtual_path'],
+                overwrite=data['overwrite'],
+            )
+        except FileExistsError:
+            return Response({'message': Messages.MGS_FILE_EXISTS_NO_OVERWRITE}, status=status.HTTP_409_CONFLICT)
 
         file_serializer = StorageFileSerializer(file)
         return Response(file_serializer.data, status.HTTP_201_CREATED)

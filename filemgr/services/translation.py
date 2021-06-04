@@ -14,3 +14,4 @@ class Messages:
     MSG_ONE_OR_MORE_ERRORS_OCCURRED = _("One or more validation error occurred while handling the supplied data.")
     MSG_INVALID_AUTH_SERVICE_RESP = _("Invalid authentication service response.")
     MGS_INVALID_PATH = _("The informed path contains invalid characters. Please use only the set: A-Za-z0-9_-./")
+    MGS_FILE_EXISTS_NO_OVERWRITE = _("The file already exists and overwriting is disabled.")
