@@ -134,7 +134,7 @@ class GenericDriver(ABC):
         # Generate the virtual path in case it wasn't provided
         file.virtual_filepath = virtual_path
         if virtual_path == "":
-            file.virtual_filepath = self.generate_virtual_path(path, is_url=is_url)
+            file.virtual_filepath = self.generate_virtual_path(file, is_url=is_url)
 
         # Check if the virtual_path (where the file should be uploaded) doesn't already exists
         self.check_if_virtual_path_exists(file.virtual_filepath, raise_ex_if_yes=not overwrite)
@@ -318,7 +318,7 @@ class GenericDriver(ABC):
             )
         return local_path_exists_bool
 
-    def create_empty_file_resource(self, user: CustomUser):
+    def create_empty_file_resource(self, user: CustomUser) -> StorageFile:
         """
         Create an empty file resource (database only)
         :param user:
@@ -327,6 +327,7 @@ class GenericDriver(ABC):
         file = StorageFile(
             storage=self.storage,
             created_by=user,
+            updated_by=user,
         )
         file.save()
 
@@ -337,24 +338,24 @@ class GenericDriver(ABC):
 
         return file
 
-    def generate_virtual_path(self, path: str, subfolder: str = '/', filename: str = None, is_url: bool = False):
+    def generate_virtual_path(self, file: StorageFile, subfolder: str = '/', filename: str = None, is_url: bool = False):
         """
-        Generate a remote virtual path for a given subfolder and filename/filepath/url
+        Generate a remote virtual path for a given subfolder and file
         :param filename: The filename to be used. Will default to the one from the path
         :param path: The filepath/url to base the filename (if auto)
         :param subfolder: the subfolder (inside remote root) where the file will exists
         :param is_url: if its an url (true) or a filepath (false)
         :return:
         """
-        if filename is not None:
-            return os.path.join(self.get_remote_root_path(), subfolder, filename)
+        if filename is None:
+            return os.path.join(self.get_remote_root_path(), subfolder, str(file.id))
 
         if is_url:
-            url_parser = urlparse(path)
-            filename = os.path.basename(url_parser.path)
-            return os.path.join(self.get_remote_root_path(), subfolder, filename)
+            url_parser = urlparse(filename)
+            base_filename = os.path.basename(url_parser.path)
+            return os.path.join(self.get_remote_root_path(), subfolder, base_filename)
 
-        return os.path.join(self.get_remote_root_path(), subfolder, Path(path).name)
+        return os.path.join(self.get_remote_root_path(), subfolder, Path(filename).name)
 
     @staticmethod
     def update_file_info_from_local(file: StorageFile, local_path: str):
