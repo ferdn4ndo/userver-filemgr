@@ -29,6 +29,7 @@ DEBUG = True
 ALLOWED_HOSTS = [
     os.environ['VIRTUAL_HOST'],
     'localhost',
+    'userver-filemgr',
 ]
 
 # Application definition
