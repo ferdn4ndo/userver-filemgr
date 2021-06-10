@@ -9,9 +9,9 @@ class StorageUserSerializer(serializers.ModelSerializer):
         required=True,
         write_only=True
     )
-    user = serializers.SlugRelatedField(
+    user = serializers.PrimaryKeyRelatedField(
         queryset=CustomUser.objects.all(),
-        slug_field='username'
+        required=True,
     )
     created_by = serializers.SlugRelatedField(
         queryset=CustomUser.objects.all(),

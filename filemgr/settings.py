@@ -46,6 +46,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    'filemgr.services.cors.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -134,6 +135,3 @@ REST_FRAMEWORK = {
     'DEFAULT_PAGINATION_CLASS': 'filemgr.services.pagination.StandardResultsSetPagination',
     'PAGE_SIZE': 10,
 }
-
-
-

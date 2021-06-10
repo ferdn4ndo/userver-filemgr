@@ -1,7 +1,5 @@
-from rest_framework.permissions import BasePermission, IsAuthenticated, SAFE_METHODS
+from rest_framework.permissions import BasePermission, SAFE_METHODS
 from rest_framework.throttling import UserRateThrottle
-
-from filemgr.services import translation
 
 
 class DefaultUserThrottle(UserRateThrottle):
@@ -14,8 +12,12 @@ class AllowAll(BasePermission):
         return True
 
 
-class IsLoggedIn(IsAuthenticated):
-    pass
+class IsLoggedIn(BasePermission):
+    def has_permission(self, request, view):
+        if request.method == 'OPTIONS':
+            return True
+
+        return bool(request.user and request.user.is_authenticated)
 
 
 class IsAdminOrCreatorOrReadOnly(BasePermission):

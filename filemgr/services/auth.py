@@ -1,10 +1,9 @@
-import os
 import datetime
-
-from rest_framework.utils import json
-from typing import Tuple
+import os
+from typing import Tuple, Optional
 
 from django import http
+from django.contrib.auth.models import AnonymousUser
 from django.contrib.sessions.models import Session
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
@@ -27,11 +26,11 @@ class UServerAuthentication(authentication.BaseAuthentication):
     """
     keyword = 'Bearer'
 
-    def authenticate(self, request: http.request) -> [Tuple]:
+    def get_token_from_request(self, request: http.request) -> Optional[str]:
         """
-        Authenticate the request and return a two-tuple of (user, token).
+        Retrieve the token used to authenticate a request
         :param request:
-        :return: Tuple
+        :return:
         """
         auth = get_authorization_header(request).split()
 
@@ -46,10 +45,21 @@ class UServerAuthentication(authentication.BaseAuthentication):
             raise exceptions.AuthenticationFailed(msg)
 
         try:
-            token = auth[1].decode()
+            return auth[1].decode()
         except UnicodeError:
             msg = _('Invalid token header. Token string should not contain invalid characters.')
             raise exceptions.AuthenticationFailed(msg)
+
+    def authenticate(self, request: http.request) -> [Tuple]:
+        """
+        Authenticate the request and return a two-tuple of (user, token).
+        :param request:
+        :return: Tuple
+        """
+        if request.method == 'OPTIONS':
+            return AnonymousUser, ''
+
+        token = self.get_token_from_request(request)
 
         return self.authenticate_credentials(token)
 
@@ -104,10 +114,34 @@ class UServerAuthentication(authentication.BaseAuthentication):
 
         return user, token
 
+    def retrieve_auth_user(self, request: http.request, system_name: str, username: str) -> CustomUser:
+        """
+        Retrieve a single user from the uServer-Auth service
+        :param request:
+        :param system_name:
+        :param username:
+        :return:
+        """
+        token = self.get_token_from_request(request)
+        auth_url = self.get_auth_url('systems/{}/users/{}'.format(system_name, username))
+        request = WebRequest(
+            url=auth_url,
+            method='GET',
+            headers={'Authorization': 'Bearer {}'.format(token)}
+        )
+
+        if request.get_status_code() == 404:
+            raise exceptions.NotFound(_('The user {} was not found on system {}!'.format(username, system_name)))
+
+        response_data = request.get_json_response()
+
+        return UServerAuthentication.create_user_from_response_data(response_data)
+
     @staticmethod
-    def create_user_from_response_data(response_data):
+    def create_user_from_response_data(response_data, update_activity=True):
         """
         Create a user (or update the existing one) based on the USever-Auth response data
+        :param update_activity:
         :param response_data:
         :return:
         """
@@ -115,7 +149,15 @@ class UServerAuthentication(authentication.BaseAuthentication):
         user.username = response_data['username']
         user.system_name = response_data['system_name']
         user.is_admin = response_data['is_admin']
-        user.last_activity_at = timezone.now()
+
+        if 'registered_at' in response_data:
+            user.registered_at = response_data['registered_at']
+
+        if 'last_activity_at' in response_data and not update_activity:
+            user.last_activity_at = response_data['last_activity_at']
+        elif update_activity:
+            user.last_activity_at = timezone.now()
+
         user.save()
 
         return user

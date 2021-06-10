@@ -85,9 +85,25 @@ class WebRequest:
         return response.object.headers
 
     def get_json_response(self):
+        """
+        Retrieves the JSON parsed response from the requests object
+        :return:
+        """
         return None if self.object is None else self.object.json()
 
+    def get_status_code(self):
+        """
+        Retrieves the HTTP response status code from the requests object
+        :return:
+        """
+        return None if self.object is None else self.object.status_code
+
     def download_to(self, dest_filename: str) -> str:
+        """
+        Downloads the request response to a given filename
+        :param dest_filename:
+        :return:
+        """
         self.update_object()
 
         with self.object(self.url, headers=self.headers, data=self.payload, stream=True) as req:
