@@ -4,22 +4,17 @@ services:
     container_name: userver-filemgr
     restart: unless-stopped
     build:
-      context: .
+      context: filemgr
       dockerfile: Dockerfile
     volumes:
-      - ./filemgr:/code/filemgr
-      - ./local:/storages/local
+      - ./filemgr:/code
       - ./logs:/code/logs
       - ./tmp:/tmp
-      - ./static:/code/static
-      - ./templates:/code/templates
-      - ./manage.py:/code/manage.py
-      - ./entrypoint.sh:/code/entrypoint.sh
-      - ./setup.sh:/code/setup.sh
+      - ./local:/storages/local
     expose:
       - 9905
     env_file:
-      - .env
+      - ./filemgr/.env
 
 networks:
   default:
