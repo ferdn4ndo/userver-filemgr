@@ -11,7 +11,6 @@ LABEL maintaner="Fernando Constantino <const.fernando@gmail.com>"
 ENV PYTHONUNBUFFERED 1
 ENV PYTHONDONTWRITEBYTECODE 1
 
-RUN mkdir /code/
 WORKDIR /code/
 
 # Copy in your requirements file
@@ -46,6 +45,8 @@ RUN set -ex \
   && python -m pip install -U --force-reinstall pip \
   && pip install --no-cache-dir -r /code/requirements.txt \
   && apk --purge del .build-deps
+
+ADD . /code/
 
 EXPOSE 9905
 

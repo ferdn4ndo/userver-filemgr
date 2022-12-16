@@ -24,8 +24,7 @@ echo "Migrating..."
 python manage.py migrate
 
 echo "Adding fixtures..."
-python manage.py loaddata /code/app/fixtures/image_sizes.yaml
-python manage.py loaddata /code/app/fixtures/mime_types.yaml
+python manage.py loaddata /code/core/fixtures/mime_types.yaml
 
 echo "Creating local test storage folder"
 mkdir -p "${LOCAL_TEST_STORAGE_ROOT}"

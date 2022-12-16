@@ -32,8 +32,35 @@ The API schema is provided in two formats:
 
 * with a GET at `<host>/docs/openapi/`, which will retrieve the [OpenAPI](https://swagger.io/specification/) YAML specification file with all the endpoints;
 
-* with a GET at `<host>/docs/red/`, which will retrieve the [ReDoc](https://github.com/Redocly/redoc) API Reference Documentation for userver-filemgr, in an interactive interface;
- 
+* with a GET at `<host>/docs/redoc/`, which will retrieve the [ReDoc](https://github.com/Redocly/redoc) API Reference Documentation for userver-filemgr, in an interactive interface;
+
+
+### Endpoints Summary
+
+#### `/media-images/` Namespace
+
+* **GET** `/media-images/`: List images;
+* **GET** `/media-images/<media-image-id>/`: Show image metadata and available sizes;
+* **POST** `/media-images/<media-image-id>/download/`: Download the biggest size tag;
+* **POST** `/media-images/<media-image-id>/download/<size-tag>/`: Download a specific size tag;
+
+#### `/storages/` Namespace
+
+* **GET** `/storages/`: List storages;
+* **POST** `/storages/`: Create a new storage;
+* **GET** `/storages/<storage-id>/`: Read a storage;
+* **PATCH** `/storages/<storage-id>/`: Update a storage;
+* **DELETE** `/storages/<storage-id>/`: Delete a storage;
+* **GET** `/storages/<storage-id>/files/`: List the storage files;
+* **GET** `/storages/<storage-id>/files/<file-id>/`: Read a file info;
+* **PATCH** `/storages/<storage-id>/files/<file-id>/`: Update (metadata only) a file;
+* **DELETE** `/storages/<storage-id>/files/<file-id>/`: Delete a file (move to trash);
+* **POST** `/storages/<storage-id>/files/<file-id>/download/`: Download the raw storage file;
+* **POST** `/storages/<storage-id>/upload-from-url`: Upload a new file to the storage from a URL;
+* **POST** `/storages/<storage-id>/upload-from-file`: Upload a new file to the storage from a local one;
+* **GET** `/storages/<storage-id>/trash/`: List the files in the recycled bin;
+* **GET** `/storages/<storage-id>/trash/<file-id>/`: Read a file in the recycled bin/Permanently delete the file;
+* **DELETE** `/storages/<storage-id>/trash/<file-id>/`: Permanently delete the file;
 
 ## Testing
 
@@ -48,7 +75,6 @@ docker exec -it userver-filemgr sh -c "python manage.py test filemgr"
 ```sh
 docker exec -it userver-filemgr sh -c "python manage.py cov filemgr"
 ```
-
 
 ## Utils
 
@@ -94,5 +120,3 @@ To update the OpenAPI schema:
 ```sh
 docker exec -it userver-filemgr sh -c "python manage.py generateschema" > openapi-schema.yaml
 ```
-
-
