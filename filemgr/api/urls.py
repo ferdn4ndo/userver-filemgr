@@ -18,9 +18,9 @@ from django.urls import include, re_path
 
 from api.forms import CustomUserAdmin
 from api.routers import storage_router, doc_router
-from core.models import User
+from core.models import CustomUser
 
-admin.site.register(User, CustomUserAdmin)
+admin.site.register(CustomUser, CustomUserAdmin)
 
 urlpatterns = [
     re_path(r'^admin/', admin.site.urls),

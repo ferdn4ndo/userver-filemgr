@@ -1,12 +1,12 @@
 from django.utils import timezone
 from rest_framework.request import Request
 
-from core.models import User
+from core.models import CustomUser
 
 
 class UserRequestService:
     request: Request
-    user: User
+    user: CustomUser
 
     def __init__(self, request: Request):
         self.request = request

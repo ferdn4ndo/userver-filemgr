@@ -1,7 +1,7 @@
 from rest_framework import serializers
 
 from api.serializers.generic_audited_model_serializer import GenericAuditedModelSerializer
-from core.models import Storage, User, StorageUser
+from core.models import Storage, CustomUser, StorageUser
 from core.services.auth.u_server_authentication_service import UServerAuthenticationService
 
 
@@ -22,7 +22,7 @@ class StorageUserSerializer(GenericAuditedModelSerializer):
         write_only=True,
     )
     user = serializers.PrimaryKeyRelatedField(
-        queryset=User.objects.all(),
+        queryset=CustomUser.objects.all(),
         required=False,
     )
 

@@ -1,12 +1,12 @@
 from django.contrib.auth.models import AnonymousUser
 
-from core.models import User
+from core.models import CustomUser
 
 
 class UserPermissionService:
-    user: User
+    user: CustomUser
 
-    def __init__(self, user: [User] = None):
+    def __init__(self, user: [CustomUser] = None):
         self.user = user
 
     def is_admin_or_staff(self) -> bool:

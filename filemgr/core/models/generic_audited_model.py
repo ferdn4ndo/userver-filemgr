@@ -1,13 +1,13 @@
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
-from core.models.user.user_model import User
+from core.models.user.user_model import CustomUser
 from core.models.generic_model import GenericModel
 
 
 class GenericAuditedModel(GenericModel):
     created_by = models.ForeignKey(
-        to=User,
+        to=CustomUser,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
@@ -16,7 +16,7 @@ class GenericAuditedModel(GenericModel):
     )
     created_at = models.DateTimeField(auto_now_add=True, verbose_name=_("Record creation timestamp"))
     updated_by = models.ForeignKey(
-        to=User,
+        to=CustomUser,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,

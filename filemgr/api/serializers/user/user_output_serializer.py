@@ -1,11 +1,11 @@
 from rest_framework import serializers
 
-from core.models.user.user_model import User
+from core.models.user.user_model import CustomUser
 
 
 class UserOutputSerializer(serializers.ModelSerializer):
     class Meta:
-        model = User
+        model = CustomUser
         fields = [
             'uuid',
             'username',

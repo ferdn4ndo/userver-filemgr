@@ -1,9 +1,9 @@
-from core.models import User
+from core.models import CustomUser
 
 
 class StorageFileDownloadService:
     @staticmethod
-    def check_file_download_permissions(self, user: User, storage_id: str, file_id: str):
+    def check_file_download_permissions(self, user: CustomUser, storage_id: str, file_id: str):
         storage = get_object_or_404(Storage.objects.all(), id=storage_id)
         if not StorageUser.user_may_read_storage(request.user, storage):
             raise PermissionDeniedException(Messages.MSG_NO_STORAGE_READ_PERM)

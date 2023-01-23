@@ -43,9 +43,9 @@ def custom_exception_handler(exception: Exception, context):
         exception = BadRequestException(detail=exception.detail)
     elif isinstance(exception, ValidationError):
         exception = BadRequestException(detail=str(exception))
-    else:
-        get_logger(__name__).error(exception)
+    elif not isinstance(exception, BaseApiException):
         exception = InternalServerException(detail=str(exception))
+        get_logger(__name__).error(exception)
 
     debug = os.getenv("DEBUG", "0") == "1"
     if not debug and isinstance(exception, InternalServerException):

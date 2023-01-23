@@ -2,13 +2,16 @@ from django.contrib import admin
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
-from core.models.storage.storage_file_model import StorageFile
+from core.models.storage.storage_model import Storage
 from core.models.generic_audited_model import GenericAuditedModel
+from core.models.storage.storage_file_model import StorageFile
+from core.models.user.user_model import CustomUser
 
 
-class Media(GenericAuditedModel):
+class StorageMedia(GenericAuditedModel):
 
     class MediaType(models.TextChoices):
+        DOCUMENT = 'DOCUMENT', _("The media item is a document.")
         IMAGE = 'IMAGE', _("The media item is an image.")
         VIDEO = 'VIDEO', _("The media item is a video.")
 
@@ -33,9 +36,18 @@ class Media(GenericAuditedModel):
     description = models.TextField(max_length=65535, null=True)
     storage_file = models.OneToOneField(to=StorageFile, on_delete=models.CASCADE, editable=False, related_name="media_file")
 
+    @staticmethod
+    def create_media_queryset(user: CustomUser, storage: Storage):
+        queryset = StorageMedia.objects.filter(storage_file__storage=storage)
 
-class MediaAdmin(admin.ModelAdmin):
+        if user.is_admin:
+            return queryset
+
+        return queryset.filter(storage_file__owner=user)
+
+
+class StorageMediaAdmin(admin.ModelAdmin):
     pass
 
 
-admin.site.register(Media, MediaAdmin)
+admin.site.register(StorageMedia, StorageMediaAdmin)

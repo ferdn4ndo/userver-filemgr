@@ -1,12 +1,12 @@
-from core.models.media.media_video_model import MediaVideo
+from core.models.storage.storage_media_video_model import StorageMediaVideo
 
 from api.serializers.generic_audited_model_serializer import GenericAuditedModelSerializer
 
 
-class MediaVideoSerializer(GenericAuditedModelSerializer):
+class StorageMediaVideoSerializer(GenericAuditedModelSerializer):
 
     class Meta:
-        model = MediaVideo
+        model = StorageMediaVideo
         fields = [
             'id',
             'fps',

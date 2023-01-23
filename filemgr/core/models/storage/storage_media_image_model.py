@@ -3,12 +3,12 @@ from django.db import models
 from django.utils.translation import gettext_lazy as _
 
 from core.models.generic_audited_model import GenericAuditedModel
-from core.models.media.media_model import Media
+from core.models.storage.storage_media_model import StorageMedia
 
 
-class MediaImage(GenericAuditedModel):
+class StorageMediaImage(GenericAuditedModel):
 
-    media = models.OneToOneField(to=Media, on_delete=models.CASCADE, editable=False)
+    media = models.OneToOneField(to=StorageMedia, on_delete=models.CASCADE, editable=False)
     focal_length = models.FloatField(null=True, verbose_name=_("Focal length of the lenses in millimeters"))
     aperture = models.CharField(max_length=255, null=True)
     flash_fired = models.BooleanField(null=True)
@@ -24,7 +24,7 @@ class MediaImage(GenericAuditedModel):
     size_tag = models.CharField(
         max_length=64,
         null=True,
-        choices=Media.MediaSizeTag.choices,
+        choices=StorageMedia.MediaSizeTag.choices,
         verbose_name=_("Biggest size tag of the media item")
     )
     height = models.PositiveIntegerField(verbose_name="Height of the media item", null=True)
@@ -37,8 +37,8 @@ class MediaImage(GenericAuditedModel):
     )
 
 
-class MediaImageAdmin(admin.ModelAdmin):
+class StorageMediaImageAdmin(admin.ModelAdmin):
     pass
 
 
-admin.site.register(MediaImage, MediaImageAdmin)
+admin.site.register(StorageMediaImage, StorageMediaImageAdmin)

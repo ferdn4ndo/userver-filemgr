@@ -1,15 +1,13 @@
 import datetime
 import math
 import os
+
 from django.db import models
 from django.utils.translation import gettext_lazy as _
-from rest_framework.request import Request
-
-from core.services.strings.strings_service import StringsService
 
 from core.models.generic_model import GenericModel
-from core.models.user.user_model import User
-from .storage_file_model import StorageFile
+from core.models.user.user_model import CustomUser
+from core.models.storage.storage_file_model import StorageFile
 
 
 class StorageFileDownload(GenericModel):
@@ -22,7 +20,7 @@ class StorageFileDownload(GenericModel):
         verbose_name=_("The file to be downloaded")
     )
     owner = models.ForeignKey(
-        to=User,
+        to=CustomUser,
         on_delete=models.SET_NULL,
         verbose_name=_("User that requested the download"),
         null=True

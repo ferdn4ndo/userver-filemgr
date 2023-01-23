@@ -1,18 +1,18 @@
 from rest_framework import serializers
 
 from api.serializers.generic_model_serializer import GenericModelSerializer
-from core.models.user.user_model import User
+from core.models.user.user_model import CustomUser
 
 
 class GenericAuditedModelSerializer(GenericModelSerializer):
     created_by = serializers.PrimaryKeyRelatedField(
-        queryset=User.objects.all(),
+        queryset=CustomUser.objects.all(),
         required=False,
         allow_null=True,
     )
     created_at = serializers.DateTimeField(read_only=True)
     updated_by = serializers.PrimaryKeyRelatedField(
-        queryset=User.objects.all(),
+        queryset=CustomUser.objects.all(),
         required=False,
         allow_null=True,
     )

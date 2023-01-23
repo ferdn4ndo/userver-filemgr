@@ -2,7 +2,7 @@ from django.utils.timezone import now
 
 from rest_framework import serializers
 
-from core.models import StorageFileDownload, User, StorageFile
+from core.models import StorageFileDownload, CustomUser, StorageFile
 
 from core.services.storage.storage_file_service import StorageFileService
 
@@ -14,7 +14,7 @@ class StorageFileDownloadSerializer(serializers.ModelSerializer):
         required=True
     )
     owner = serializers.PrimaryKeyRelatedField(
-        queryset=User.objects.all(),
+        queryset=CustomUser.objects.all(),
         write_only=True,
         required=True
     )

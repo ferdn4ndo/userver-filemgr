@@ -1,6 +1,7 @@
 from rest_framework import routers
 
 from api.routers.route_names import RouteNames
+from api.views.storage.storage_media_view import StorageMediaViewSet
 from api.views.storage.storage_file_download_view import StorageFileDownloadViewSet
 from api.views.storage.storage_file_upload_from_file_view import StorageFileUploadView
 from api.views.storage.storage_file_upload_from_url_view import StorageFileUploadUrlView
@@ -26,6 +27,16 @@ router.register(
     basename=RouteNames.ROUTE_STORAGE_FILE_DOWNLOAD
 )
 router.register(
+    prefix=r'(?P<storage_id>[^/.]+)/media',
+    viewset=StorageMediaViewSet,
+    basename=RouteNames.ROUTE_STORAGE_MEDIA
+)
+router.register(
+    prefix=r'(?P<storage_id>[^/.]+)/trash',
+    viewset=StorageTrashViewSet,
+    basename=RouteNames.ROUTE_STORAGE_TRASH
+)
+router.register(
     prefix=r'(?P<storage_id>[^/.]+)/upload-from-file',
     viewset=StorageFileUploadView,
     basename=RouteNames.ROUTE_STORAGE_UPLOAD_FILE
@@ -34,11 +45,6 @@ router.register(
     prefix=r'(?P<storage_id>[^/.]+)/upload-from-url',
     viewset=StorageFileUploadUrlView,
     basename=RouteNames.ROUTE_STORAGE_UPLOAD_URL
-)
-router.register(
-    prefix=r'(?P<storage_id>[^/.]+)/trash',
-    viewset=StorageTrashViewSet,
-    basename=RouteNames.ROUTE_STORAGE_TRASH
 )
 router.register(
     prefix=r'(?P<storage_id>[^/.]+)/users',

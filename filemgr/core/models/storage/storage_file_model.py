@@ -14,7 +14,7 @@ from core.services.translation.translation_service import Messages
 from core.models.generic_model import GenericModel
 from core.models.storage.storage_file_mime_type_model import StorageFileMimeType
 from core.models.storage.storage_model import Storage
-from core.models.user.user_model import User
+from core.models.user.user_model import CustomUser
 
 
 
@@ -50,11 +50,12 @@ class StorageFile(GenericModel):
         """
         LOCAL = 'LOCAL', _('Local')
         WEB = 'WEB', _('Web')
+        SYSTEM = 'SYSTEM', _('System')
         UNKNOWN = 'UNKNOWN', _('Unknown')
 
     signature_key = models.CharField(max_length=64, default=StringsService.generate_random_encoded_string)
     storage = models.ForeignKey(to=Storage, on_delete=models.CASCADE, editable=False)
-    owner = models.ForeignKey(to=User, on_delete=models.SET_NULL, null=True, related_name="storage_file_owner")
+    owner = models.ForeignKey(to=CustomUser, on_delete=models.SET_NULL, null=True, related_name="storage_file_owner")
     name = models.CharField(max_length=255, verbose_name=_("A name for the file"), null=True)
     status = models.CharField(max_length=50, choices=FileStatus.choices, default=FileStatus.NOT_UPLOADED)
     visibility = models.CharField(max_length=50, choices=FileVisibility.choices, default=FileVisibility.SYSTEM)
@@ -98,14 +99,14 @@ class StorageFile(GenericModel):
     available = models.BooleanField(default=True, verbose_name=_("If the file is remotely available"))
     excluded = models.BooleanField(default=False, verbose_name=_("If the file was marked as excluded in the interface"))
     created_by = models.ForeignKey(
-        to=User,
+        to=CustomUser,
         on_delete=models.SET_NULL,
         null=True,
         related_name="storage_file_creator",
     )
     created_at = models.DateTimeField(auto_now_add=True, verbose_name=_("Record creation timestamp"))
     updated_by = models.ForeignKey(
-        to=User,
+        to=CustomUser,
         on_delete=models.SET_NULL,
         null=True,
         related_name="storage_file_editor",
@@ -133,7 +134,7 @@ class StorageFile(GenericModel):
         """
         return str(self.virtual_path).split("/")[-1]
 
-    def is_visible_by_user(self, user: User) -> bool:
+    def is_visible_by_user(self, user: CustomUser) -> bool:
         """
         Retrieves a boolean indicating whether the file is visible to a given user or not
         :param user:
@@ -146,7 +147,7 @@ class StorageFile(GenericModel):
         )
 
     @staticmethod
-    def create_storage_queryset(user: User, storage: Storage, excluded: bool = False):
+    def create_storage_queryset(user: CustomUser, storage: Storage, excluded: bool = False):
         queryset = StorageFile.objects.filter(storage=storage, excluded=excluded)
 
         if user.is_admin:

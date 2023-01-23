@@ -2,10 +2,13 @@ import os.path
 import tempfile
 from pathlib import Path
 
+import math
 from PIL import Image, ImageFilter, ImageOps
 from django.forms import model_to_dict
 
-from core.models import StorageFile, MediaImage, Media, MediaImageSized
+from core.models import StorageFile, StorageMediaImage, StorageMedia, StorageMediaImageSized
+from core.models.storage.storage_media_thumbnail_model import StorageMediaThumbnail
+from core.services.file.file_service import generate_file_hash
 from core.services.logger.logger_service import get_logger
 from core.services.media.media_image_service import MediaImageService
 from core.services.message_broker.message_broker_service import MessageBrokerService
@@ -26,22 +29,29 @@ class MediaImageProcessorService:
         with Image.open(self.temp_file_path) as image:
             self.original_width, self.original_height = image.size
 
+        self.storage_file.hash = generate_file_hash(self.temp_file_path)
+        self.storage_file.save()
+
         self.media_convert_configuration = self.storage_file.storage.media_convert_configuration
 
-        self.media = Media(
+        self.media = StorageMedia(
             title=self.storage_file.name,
-            type=Media.MediaType.IMAGE,
+            type=StorageMedia.MediaType.IMAGE,
             description="",
             storage_file=self.storage_file,
+            created_by=self.storage_file.created_by,
+            updated_by=self.storage_file.updated_by,
         )
         self.media.save()
 
-        self.media_image = MediaImage(
+        self.media_image = StorageMediaImage(
             media=self.media,
             size_tag=self.get_size_tag_from_dimensions(width=self.original_width, height=self.original_height),
             height=self.original_height,
             width=self.original_width,
             megapixels=(self.original_width * self.original_height)/1000000,
+            created_by=self.storage_file.created_by,
+            updated_by=self.storage_file.updated_by,
         )
         self.media_image.save()
 
@@ -72,7 +82,6 @@ class MediaImageProcessorService:
 
             size_tag = self.get_size_tag_from_dimensions(width=resize_width, height=resize_height)
 
-            resized_storage_file = self.create_resized_file_resource()
 
             with Image.open(self.temp_file_path) as image:
                 image.thumbnail((resize_width, resize_height))
@@ -81,7 +90,6 @@ class MediaImageProcessorService:
                     width=resize_width,
                     height=resize_height,
                     image=image,
-                    storage_file=resized_storage_file,
                 )
 
         self.logger.info(f"Creating thumbnails for file {self.storage_file.id}...")
@@ -116,17 +124,17 @@ class MediaImageProcessorService:
     def create_thumbnails(self):
         thumbnail_sizes = [
             {
-                "tag": Media.MediaSizeTag.SIZE_THUMB_LARGE,
+                "tag": StorageMedia.MediaSizeTag.SIZE_THUMB_LARGE,
                 "width": 960,
                 "height": 720,
             },
             {
-                "tag": Media.MediaSizeTag.SIZE_THUMB_MEDIUM,
+                "tag": StorageMedia.MediaSizeTag.SIZE_THUMB_MEDIUM,
                 "width": 480,
                 "height": 360,
             },
             {
-                "tag": Media.MediaSizeTag.SIZE_THUMB_SMALL,
+                "tag": StorageMedia.MediaSizeTag.SIZE_THUMB_SMALL,
                 "width": 240,
                 "height": 180,
             },
@@ -139,14 +147,14 @@ class MediaImageProcessorService:
                 height=thumbnail_params["height"],
             )
 
-        print(f"FINISHED CREATING THUMBNAILS FOR FILE ID {self.storage_file.id}")
+        self.logger.info(f"FINISHED CREATING THUMBNAILS FOR FILE ID {self.storage_file.id}")
 
     @staticmethod
     def _get_center_box(outer_width: int, outer_height: int, inner_width: int, inner_height: int) -> tuple:
-        left = round((outer_width - inner_width)/2)
-        top = round((outer_height - inner_height)/2)
-        right = round((outer_width + inner_width)/2)
-        bottom = round((outer_height + inner_height)/2)
+        left = math.floor((outer_width - inner_width)/2)
+        top = math.floor((outer_height - inner_height)/2)
+        right = math.floor((outer_width + inner_width)/2)
+        bottom = math.floor((outer_height + inner_height)/2)
 
         return left, top, right, bottom
 
@@ -156,43 +164,72 @@ class MediaImageProcessorService:
             width: int,
             height: int,
             image: Image.Image,
-            storage_file: StorageFile,
     ):
         resized_file_folder = os.path.join(tempfile.gettempdir(), "resized", size_tag)
         Path(resized_file_folder).mkdir(parents=True, exist_ok=True)
-        resized_file_path = os.path.join(resized_file_folder, str(storage_file.id))
+        resized_file_path = os.path.join(resized_file_folder, str(self.storage_file.id))
         image.save(fp=resized_file_path, format="JPEG")
 
-        remote_path = self.driver.get_real_remote_path(file=storage_file, subfolder=f"resized/{size_tag}")
-
-        self.driver.perform_upload_from_path(
-            local_path=resized_file_path,
-            remote_path=remote_path,
-        )
-
-        media_image_sized = MediaImageSized(
-            media_image=self.media_image,
-            storage_file=storage_file,
+        thumbnail_storage_file = self.driver.perform_basic_upload_operations(
+            user=self.storage_file.owner,
+            path=resized_file_path,
+            name=self.storage_file.name,
+            virtual_path=f"resized/{size_tag}/{self.storage_file.virtual_path}",
+            original_path=self.storage_file.original_path,
+            origin=StorageFile.FileOrigin.SYSTEM,
+            overwrite=True,
+            visibility=self.storage_file.visibility,
+            is_url=False,
             size_tag=size_tag,
-            height=height,
-            width=width,
-            megapixels=(width * height)/1000000,
         )
-        media_image_sized.save()
+
+        thumbnail_storage_file.exif_metadata = self.storage_file.exif_metadata
+        thumbnail_storage_file.custom_metadata = self.storage_file.custom_metadata
+        thumbnail_storage_file.status = StorageFile.FileStatus.PUBLISHED
+        thumbnail_storage_file.save()
+
+        thumbnail_size_tags = [
+            StorageMedia.MediaSizeTag.SIZE_THUMB_LARGE,
+            StorageMedia.MediaSizeTag.SIZE_THUMB_MEDIUM,
+            StorageMedia.MediaSizeTag.SIZE_THUMB_SMALL,
+        ]
+
+        if size_tag in thumbnail_size_tags:
+            media_thumbnail = StorageMediaThumbnail(
+                media=self.media,
+                storage_file=thumbnail_storage_file,
+                size_tag=size_tag,
+                height=height,
+                width=width,
+                megapixels=(width * height)/1000000,
+                created_by=self.storage_file.created_by,
+                updated_by=self.storage_file.updated_by,
+            )
+            media_thumbnail.save()
+        else:
+            media_image_sized = StorageMediaImageSized(
+                media_image=self.media_image,
+                storage_file=thumbnail_storage_file,
+                size_tag=size_tag,
+                height=height,
+                width=width,
+                megapixels=(width * height)/1000000,
+                created_by=self.storage_file.created_by,
+                updated_by=self.storage_file.updated_by,
+            )
+            media_image_sized.save()
 
         self.logger.info(
             f"Finished resizing file {self.storage_file.id} to size {width} x {height} (tmp path: {resized_file_path})"
         )
 
     def create_thumbnail(self, size_tag: str, width: int, height: int):
-        thumbnail_storage_file = self.create_resized_file_resource()
-
         thumbnail_image = Image.new("RGB", (width, height))
 
         original_proportion = round(self.original_width/self.original_height, 2)
         thumbnail_proportion = round(width/height, 2)
         if thumbnail_proportion != original_proportion:
-            print("ADJUSTING THUMBNAIL BACKGROUND")
+            self.logger.info("ADJUSTING THUMBNAIL BACKGROUND")
             background_width, background_height = self.compute_new_image_dimensions(expected_width=width, expected_height=height)
             image = Image.open(fp=self.temp_file_path)
             image.thumbnail((background_width, background_height))
@@ -223,24 +260,23 @@ class MediaImageProcessorService:
             width=width,
             height=height,
             image=thumbnail_image,
-            storage_file=thumbnail_storage_file,
         )
 
     @staticmethod
     def get_size_tag_from_dimensions(width: int, height: int):
         if width >= 8192 and height >= 5472:
-            return Media.MediaSizeTag.SIZE_8K
+            return StorageMedia.MediaSizeTag.SIZE_8K
 
         if width >= 4096 and height >= 2752:
-            return Media.MediaSizeTag.SIZE_4K
+            return StorageMedia.MediaSizeTag.SIZE_4K
 
         if width >= 3200 and height >= 2144:
-            return Media.MediaSizeTag.SIZE_3K
+            return StorageMedia.MediaSizeTag.SIZE_3K
 
         if width >= 2048 and height >= 1376:
-            return Media.MediaSizeTag.SIZE_2K
+            return StorageMedia.MediaSizeTag.SIZE_2K
 
         if width >= 1280 and height >= 864:
-            return Media.MediaSizeTag.SIZE_1K
+            return StorageMedia.MediaSizeTag.SIZE_1K
 
-        return Media.MediaSizeTag.SIZE_VGA
+        return StorageMedia.MediaSizeTag.SIZE_VGA

@@ -1,15 +1,15 @@
-from core.models.media.media_image_model import MediaImage
-from core.models.media.media_image_sized_model import MediaImageSized
+from core.models.storage.storage_media_image_model import StorageMediaImage
+from core.models.storage.storage_media_image_sized_model import StorageMediaImageSized
 from core.services.photo.photo_exif_service import PhotoExifService
 
 
 class MediaImageService:
-    media_image: MediaImage
+    media_image: StorageMediaImage
 
-    def __init__(self, media_image: MediaImage):
+    def __init__(self, media_image: StorageMediaImage):
         self.media_image = media_image
 
-    def update_file_metadata_from_path(self, image_path: str) -> MediaImage:
+    def update_file_metadata_from_path(self, image_path: str) -> StorageMediaImage:
         service = PhotoExifService(file_path=image_path)
 
         self.media_image.height = service.get_image_height()
@@ -33,9 +33,9 @@ class MediaImageService:
 
         return self.media_image
 
-    def get_media_image_sized_from_dimensions(self, height: int, width: int, approximate=False) -> MediaImageSized:
+    def get_media_image_sized_from_dimensions(self, height: int, width: int, approximate=False) -> StorageMediaImageSized:
         """
-        Retrieve the MediaImageSized object that corresponds to a given height and width. It may
+        Retrieve the StorageMediaImageSized object that corresponds to a given height and width. It may
         optionally approximate the selection (always selecting the highest quality dimension that is fulfilled by
         the given size).
         :param height:
@@ -44,11 +44,11 @@ class MediaImageService:
         :return:
         """
         try:
-            return MediaImageSized.objects.get(media_image=self.media_image, height=height, width=width)
-        except MediaImageSized.DoesNotExist:
+            return StorageMediaImageSized.objects.get(media_image=self.media_image, height=height, width=width)
+        except StorageMediaImageSized.DoesNotExist:
             if not approximate:
                 raise
-            dimensions_list = MediaImageSized.objects.filter(
+            dimensions_list = StorageMediaImageSized.objects.filter(
                 media_image=self.media_image,
                 height__lte=height,
                 width__lte=width,

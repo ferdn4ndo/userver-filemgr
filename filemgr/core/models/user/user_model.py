@@ -41,7 +41,7 @@ class UserManager(BaseUserManager):
         return self.create_user(uuid, token, **extra_fields)
 
 
-class User(AbstractBaseUser, PermissionsMixin):
+class CustomUser(AbstractBaseUser, PermissionsMixin):
     """
     Users within the uServer authentication system are represented by this model.
     UUID is required. Other fields are optional.

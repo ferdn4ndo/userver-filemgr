@@ -11,7 +11,7 @@ from rest_framework.authentication import get_authorization_header
 
 from api.exceptions.not_authenticated_exception import NotAuthenticatedException
 from core.exceptions.model_not_found_exception import ModelNotFoundException
-from core.models.user.user_model import User
+from core.models.user.user_model import CustomUser
 from core.models.user.user_token_model import UserToken
 from core.services.logger.logger_service import get_logger
 from core.services.web_request.web_request_service import WebRequestService
@@ -127,12 +127,12 @@ class UServerAuthenticationService(authentication.BaseAuthentication):
         return user, token
 
     @staticmethod
-    def create_user_from_email(email: str, system_name: str, is_admin: bool = False) -> User:
+    def create_user_from_email(email: str, system_name: str, is_admin: bool = False) -> CustomUser:
         """
         Create a user (or update the existing one) based on the USever-Auth response data
         :return:
         """
-        user, created = User.objects.get_or_create(username=email)
+        user, created = CustomUser.objects.get_or_create(username=email)
         user.system_name = system_name
         user.is_admin = is_admin
         user.last_activity_at = timezone.now()
@@ -163,7 +163,7 @@ class UServerAuthenticationService(authentication.BaseAuthentication):
         """
         Session.objects.all().delete()
 
-    def get_user_from_system_name_and_username(self, system_name: str, username: str) -> User:
+    def get_user_from_system_name_and_username(self, system_name: str, username: str) -> CustomUser:
         """
         Get an existing uServer Auth user based on his uuid
         :param system_name:
@@ -200,7 +200,7 @@ class UServerAuthenticationService(authentication.BaseAuthentication):
             )
             raise ModelNotFoundException("The given user was not found!")
 
-        user, created = User.objects.get_or_create(id=user_response['uuid'])
+        user, created = CustomUser.objects.get_or_create(id=user_response['uuid'])
         user.username = user_response['username']
         user.system_name = user_response['system_name']
         user.is_admin = user_response['is_admin']
@@ -248,7 +248,7 @@ class UServerAuthenticationService(authentication.BaseAuthentication):
         if 'access_token' not in login_response_data:
             raise NotAuthenticatedException(_("Failed to login with user."))
 
-        user, created = User.objects.get_or_create(username=username)
+        user, created = CustomUser.objects.get_or_create(username=username)
         user.set_password(password)
         user.save()
         login_response_data['user_id'] = user.id

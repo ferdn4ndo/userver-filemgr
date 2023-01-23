@@ -2,7 +2,7 @@ from rest_framework import serializers
 
 from core.models.storage.storage_file_download_model import StorageFileDownload
 from core.models.storage.storage_file_model import StorageFile
-from core.models.user.user_model import User
+from core.models.user.user_model import CustomUser
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -10,7 +10,7 @@ class UserSerializer(serializers.ModelSerializer):
     total_uploads = serializers.SerializerMethodField(method_name='get_total_uploads')
 
     class Meta:
-        model = User
+        model = CustomUser
         fields = [
             'id',
             'username',
@@ -23,7 +23,7 @@ class UserSerializer(serializers.ModelSerializer):
             'total_uploads',
         ]
 
-    def get_total_downloads(self, obj: User) -> int:
+    def get_total_downloads(self, obj: CustomUser) -> int:
         """
         Returns the total amount of downloads recorded for a given user
         :param obj:
@@ -31,7 +31,7 @@ class UserSerializer(serializers.ModelSerializer):
         """
         return len(StorageFileDownload.objects.filter(owner=obj))
 
-    def get_total_uploads(self, obj: User) -> int:
+    def get_total_uploads(self, obj: CustomUser) -> int:
         """
         Returns the total amount of uploads recorded for a given user
         :param obj:

@@ -14,8 +14,8 @@ from core.exceptions.storage_driver_exception import StorageDriverException
 from core.models.storage.storage_file_mime_type_model import StorageFileMimeType
 from core.models.storage.storage_file_model import StorageFile
 from core.models.storage.storage_model import Storage
-from core.models.user.user_model import User
-from core.services.file.file_service import save_from_memory, generate_file_hash
+from core.models.user.user_model import CustomUser
+from core.services.file.file_service import save_from_memory, generate_file_hash, FileService
 from core.services.media.media_file_service import MediaFileService
 from core.services.message_broker.message_broker_service import MessageBrokerService
 from core.services.photo.photo_exif_service import PhotoExifService
@@ -104,6 +104,7 @@ class GenericStorageDriver(ABC):
         """
         Get the real remote path for a StoreFile (usually different from the 'visual' remote_path)
         :param file: the file to retrieve the path
+        :param subfolder: the sub-folder to retrieve the path
         :return: the file path
         """
         path_parts = []
@@ -127,11 +128,12 @@ class GenericStorageDriver(ABC):
 
     def upload_from_path(
             self,
-            user: User,
+            user: CustomUser,
             path: str,
             name: str = "",
             virtual_path: str = "",
             original_path: str = "",
+            origin: str = StorageFile.FileOrigin.UNKNOWN,
             overwrite: bool = False,
             visibility: str = StorageFile.FileVisibility.USER,
             is_url: bool = False,
@@ -143,13 +145,46 @@ class GenericStorageDriver(ABC):
         :param name: the file name that's going to be uploaded
         :param path: the file path (local or url) that's going to be uploaded
         :param original_path: the path of the file in the origin system before being uploaded
+        :param origin: the origin of the file
         :param virtual_path: the virtual remote path to where the file should be uploaded
         :param overwrite: if the file should be replaced in case the remote path already exists
         :param visibility: file visibility (one of StorageFile.FileVisibility options)
         :param is_url: if the "path" argument is a URL (True) or a local file path (False)
         :return:
         """
+        storage_file = self.perform_basic_upload_operations(
+            user=user,
+            path=path,
+            name=name,
+            virtual_path=virtual_path,
+            original_path=original_path,
+            origin=origin,
+            overwrite=overwrite,
+            visibility=visibility,
+            is_url=is_url,
+        )
+
+        # Process media file
+        service = MediaFileService(storage_file=storage_file)
+        storage_file = service.process_media_file()
+
+        return storage_file
+
+    def perform_basic_upload_operations(
+            self,
+            user: CustomUser,
+            path: str,
+            name: str = "",
+            virtual_path: str = "",
+            original_path: str = "",
+            origin: str = StorageFile.FileOrigin.UNKNOWN,
+            overwrite: bool = False,
+            visibility: str = StorageFile.FileVisibility.USER,
+            is_url: bool = False,
+            size_tag: str = "",
+    ) -> StorageFile:
         storage_file = self.create_empty_file_resource(user)
+        storage_file.origin = origin
         storage_file.status = StorageFile.FileStatus.UPLOADING
         storage_file.name = name
         storage_file.visibility = visibility
@@ -161,21 +196,25 @@ class GenericStorageDriver(ABC):
         # Check if the virtual_path (where the file should be uploaded) doesn't already exist
         self.check_if_virtual_path_exists(storage_file.virtual_path, raise_ex_if_yes=not overwrite)
 
+        # ToDo: Delete file if exists
+
         # Call the appropriate file metadata reader to update the model
         if is_url:
             self.update_file_info_from_url(file=storage_file, file_url=path)
         else:
             self.update_file_info_from_local(file=storage_file, local_path=path)
-        storage_file.save()
-
-        self.check_if_virtual_path_exists(storage_file.virtual_path, raise_ex_if_no=True)
 
         # Perform the upload by calling the appropriate method
-        file_real_path = self.get_real_remote_path(storage_file)
+        file_real_path = self.get_real_remote_path(
+            file=storage_file,
+            subfolder=None if not size_tag else f"resized/{size_tag}"
+        )
         if is_url:
             self.perform_upload_from_url(url=path, remote_path=file_real_path)
         else:
             self.perform_upload_from_path(local_path=path, remote_path=file_real_path)
+        storage_file.real_path = file_real_path
+        storage_file.save()
 
         # Check if the file was really uploaded
         self.check_if_virtual_path_exists(storage_file.virtual_path, raise_ex_if_no=True)
@@ -183,15 +222,11 @@ class GenericStorageDriver(ABC):
         storage_file.status = StorageFile.FileStatus.UPLOADED
         storage_file.save()
 
-        # Process media file
-        service = MediaFileService(storage_file=storage_file)
-        storage_file = service.process_media_file()
-
         return storage_file
 
     def upload_from_request_file(
             self,
-            user: User,
+            user: CustomUser,
             request_file: Union[TemporaryUploadedFile, InMemoryUploadedFile],
             name: str = "",
             virtual_path: str = "",
@@ -223,13 +258,14 @@ class GenericStorageDriver(ABC):
             user=user,
             name=name,
             path=temp_file_path,
+            original_path=request_file.name,
+            origin=StorageFile.FileOrigin.LOCAL,
             virtual_path=virtual_path,
             overwrite=overwrite,
             visibility=visibility,
             is_url=is_url
         )
 
-        storage_file.original_path = request_file.name
         storage_file.save()
 
         return storage_file
@@ -349,7 +385,7 @@ class GenericStorageDriver(ABC):
             )
         return local_path_exists_bool
 
-    def create_empty_file_resource(self, user: User) -> StorageFile:
+    def create_empty_file_resource(self, user: CustomUser) -> StorageFile:
         """
         Create an empty file resource (database only)
         :param user:
@@ -413,9 +449,7 @@ class GenericStorageDriver(ABC):
             service = PhotoExifService(file_path=local_path)
             file.exif_metadata = service.exif_data
 
-        file.origin = StorageFile.FileOrigin.LOCAL
-        file.original_filename = os.path.split(local_path)[1]
-        file.original_path = local_path
+        file.name = file.name if file.name != "" else FileService.get_name_from_path(file.original_path)
         file.hash = generate_file_hash(local_path)
         file.save()
 
@@ -432,6 +466,6 @@ class GenericStorageDriver(ABC):
         file.size = int(url_info['Content-Length'])
         file.type = StorageFileMimeType.from_mime_type(url_info['Content-Type'])
         file.origin = StorageFile.FileOrigin.WEB
-        file.original_filename = os.path.basename(url_address_parser.path)
         file.original_path = file_url
+        file.name = file.name if file.name != "" else FileService.get_name_from_path(url_address_parser.path)
         file.save()

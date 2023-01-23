@@ -1,12 +1,14 @@
-from core.models.media.media_image_model import MediaImage
-
 from api.serializers.generic_audited_model_serializer import GenericAuditedModelSerializer
+from api.serializers.storage.storage_media_image_sized_serializer import StorageMediaImageSizedSerializer
+
+from core.models.storage.storage_media_image_model import StorageMediaImage
 
 
-class MediaImageSerializer(GenericAuditedModelSerializer):
+class StorageMediaImageSerializer(GenericAuditedModelSerializer):
+    sized_images = StorageMediaImageSizedSerializer(many=True, read_only=True)
 
     class Meta:
-        model = MediaImage
+        model = StorageMediaImage
         fields = [
             'id',
             'focal_length',
@@ -24,9 +26,10 @@ class MediaImageSerializer(GenericAuditedModelSerializer):
             'size_tag',
             'height',
             'width',
-            'total_pixels',
+            'megapixels',
             'created_at',
             'created_by',
             'updated_at',
             'updated_by',
+            'sized_images',
         ]

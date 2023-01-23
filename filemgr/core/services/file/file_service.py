@@ -55,3 +55,15 @@ def save_from_memory(memory_file: InMemoryUploadedFile) -> str:
     with open(local_filename, 'wb') as file:
         shutil.copyfileobj(memory_file, file)
     return local_filename
+
+
+class FileService:
+
+    @staticmethod
+    def get_name_from_path(filepath: str) -> str:
+        """
+        Retrieves a name from a given path (ex: "/path/to/file_name.txt" will return "file_name")
+        """
+        filename = os.path.basename(filepath)
+
+        return os.path.splitext(filename)[0]

@@ -1,11 +1,11 @@
 from api.serializers.generic_audited_model_serializer import GenericAuditedModelSerializer
-from core.models.media.media_document_model import MediaDocument
+from core.models.storage.storage_media_document_model import StorageMediaDocument
 
 
-class MediaDocumentSerializer(GenericAuditedModelSerializer):
+class StorageMediaDocumentSerializer(GenericAuditedModelSerializer):
 
     class Meta:
-        model = MediaDocument
+        model = StorageMediaDocument
         fields = [
             'id',
             'pages',

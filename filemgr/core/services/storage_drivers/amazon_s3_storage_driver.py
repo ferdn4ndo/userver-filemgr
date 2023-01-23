@@ -88,7 +88,7 @@ class AmazonS3StorageDriver(GenericStorageDriver):
 
         params = {
             'Bucket': self.storage.credentials['AWS_S3_BUCKET'],
-            'Key': self.get_real_remote_path(file),
+            'Key': file.real_path,
             'ResponseContentDisposition': "{};filename={}".format(
                 'inline' if not force_download else 'attachment',
                 file.get_filename_from_virtual_path()

@@ -1,4 +1,4 @@
-from core.models import StorageFile, User
+from core.models import StorageFile, CustomUser
 from core.services.storage.storage_service import StorageService
 from core.services.storage_drivers.generic_storage_driver import GenericStorageDriver
 
@@ -15,7 +15,7 @@ class StorageFileService:
 
         return service.load_driver()
 
-    def delete_file(self, user: User):
+    def delete_file(self, user: CustomUser):
         self.storage_file.excluded = True
         self.storage_file.updated_by = user
         self.storage_file.save()

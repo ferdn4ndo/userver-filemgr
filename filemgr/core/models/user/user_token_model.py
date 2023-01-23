@@ -3,12 +3,12 @@ from uuid import uuid4
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
-from core.models import User
+from core.models import CustomUser
 
 
 class UserToken(models.Model):
     uuid = models.UUIDField(primary_key=True, default=uuid4, editable=False)
-    user = models.ForeignKey(to=User, on_delete=models.CASCADE, verbose_name=_("User that has the token"))
+    user = models.ForeignKey(to=CustomUser, on_delete=models.CASCADE, verbose_name=_("User that has the token"))
     token = models.CharField(
         max_length=255,
         unique=True,
