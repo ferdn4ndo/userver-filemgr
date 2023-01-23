@@ -1,3 +1,0 @@
-[submodule "ck_lib_jwt_auth"]
-	path = ck_lib_jwt_auth
-	url = git@github.com:wiley/ck_lib_jwt_auth.git
