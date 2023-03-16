@@ -7,11 +7,12 @@ from api.policies.is_admin_or_owner_or_read_only_policy import IsAdminOrOwnerOrR
 from api.policies.is_logged_in_policy import IsLoggedInPolicy
 from api.serializers.storage.storage_file_serializer import StorageFileSerializer
 from api.services.storage.storage_file_view_service import StorageFileViewService
-from api.views.generic_model_view import ReadUpdateDestroyModelViewSet
+from api.views.generic_read_update_destroy_model_view import GenericReadUpdateDestroyModelViewSet
 from core.models import StorageFile, Storage, get_object_or_not_found_error
+from core.services.media.media_file_service import MediaFileService
 
 
-class StorageFileViewSet(ReadUpdateDestroyModelViewSet):
+class StorageFileViewSet(GenericReadUpdateDestroyModelViewSet):
     permission_classes = [IsLoggedInPolicy, IsAdminOrOwnerOrReadOnlyPolicy]
     serializer_class = StorageFileSerializer
 
@@ -24,6 +25,15 @@ class StorageFileViewSet(ReadUpdateDestroyModelViewSet):
         queryset = StorageFile.create_storage_queryset(user=self.request.user, storage=storage, excluded=False)
 
         return queryset
+
+    def update(self, request: Request, *args, **kwargs) -> Response:
+        response = super(StorageFileViewSet, self).update(request=request, *args, **kwargs)
+
+        if 'custom_metadata' in request.data:
+            service = MediaFileService(storage_file=self.get_object())
+            service.process_if_is_media_file()
+
+        return response
 
     def destroy(self, request: Request, *args, **kwargs) -> Response:
         storage_file = get_object_or_404(self.get_queryset(), pk=self.kwargs['pk'])

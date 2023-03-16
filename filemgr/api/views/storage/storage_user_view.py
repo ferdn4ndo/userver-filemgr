@@ -5,11 +5,11 @@ from rest_framework.response import Response
 from api.models import get_object_or_404
 from api.policies.is_admin_or_deny_policy import IsAdminOrDenyPolicy
 from api.serializers.storage.storage_user_serializer import StorageUserSerializer
-from api.views.generic_model_view import CreateReadDestroyModelViewSet
+from api.views.generic_create_read_destroy_model_view import GenericCreateReadDestroyModelViewSet
 from core.models import StorageUser, Storage
 
 
-class StorageUserViewSet(CreateReadDestroyModelViewSet):
+class StorageUserViewSet(GenericCreateReadDestroyModelViewSet):
     permission_classes = [IsAdminOrDenyPolicy]
     serializer_class = StorageUserSerializer
 

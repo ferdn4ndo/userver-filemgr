@@ -6,11 +6,11 @@ from rest_framework.request import Request
 from api.policies.is_logged_in_policy import IsLoggedInPolicy
 from api.serializers.storage.storage_file_download_serializer import StorageFileDownloadSerializer
 from api.services.storage.storage_file_download_view_service import StorageFileDownloadViewService
-from api.views.generic_model_view import CreateReadModelViewSet
+from api.views.generic_create_read_model_view import GenericCreateReadModelViewSet
 from core.models import StorageFileDownload, StorageFile, Storage
 
 
-class StorageFileDownloadViewSet(CreateReadModelViewSet):
+class StorageFileDownloadViewSet(GenericCreateReadModelViewSet):
     permission_classes = [IsLoggedInPolicy]
     serializer_class = StorageFileDownloadSerializer
 

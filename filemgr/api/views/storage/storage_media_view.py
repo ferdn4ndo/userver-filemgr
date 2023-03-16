@@ -4,11 +4,11 @@ from api.models import get_object_or_404
 from api.policies.is_admin_or_owner_or_read_only_policy import IsAdminOrOwnerOrReadOnlyPolicy
 from api.policies.is_logged_in_policy import IsLoggedInPolicy
 from api.serializers.storage.storage_media_serializer import StorageMediaSerializer
-from api.views.generic_model_view import ReadModelViewSet
+from api.views.generic_read_model_view import GenericReadModelViewSet
 from core.models import StorageMedia, Storage
 
 
-class StorageMediaViewSet(ReadModelViewSet):
+class StorageMediaViewSet(GenericReadModelViewSet):
     permission_classes = [IsLoggedInPolicy, IsAdminOrOwnerOrReadOnlyPolicy]
     serializer_class = StorageMediaSerializer
 
