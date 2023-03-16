@@ -11,6 +11,10 @@ tmp/*
 logs/*
 !logs/.gitkeep
 
+# Static files
+filemgr/static/*
+!filemgr/static/.gitkeep
+
 # Environments
 .env
 venv/
