@@ -6,7 +6,7 @@ import shutil
 import requests
 from typing import Dict, Any
 
-from app.errors import PreConditionFailed
+from api.exceptions.precondition_failed_exception import PreconditionFailedException
 
 
 class WebRequest:
@@ -38,25 +38,30 @@ class WebRequest:
         if headers is not None:
             self.headers = {**self.headers, **headers}
 
-        method = str(method).upper()
-        if method is not None and method not in self.REQUEST_METHODS:
-            raise PreConditionFailed('The method must be one of the followings: {} ({} given)')
-        self.method = method
+        self._parse_method(method=method)
 
         self.payload = payload
         self.stream = stream
 
         self.object = None
-        self.update_object()
+        self._update_object()
+
+    def _parse_method(self, method: str) -> None:
+        method = str(method).upper()
+
+        if method is not None and method not in self.REQUEST_METHODS:
+            raise PreconditionFailedException('The method must be one of the followings: {} ({} given)')
+
+        self.method = method
 
     def set_json_payload(self, payload=None) -> WebRequest:
         payload = payload if payload is not None else {}
         self.headers['Content-Type'] = 'application/json'
         self.payload = json.dumps(payload)
-        self.update_object()
+        self._update_object()
         return self
 
-    def update_object(self):
+    def _update_object(self):
         """
         Update the requests object with the class arguments
         :return:
@@ -71,6 +76,7 @@ class WebRequest:
         """
         if self.object is None:
             return None
+
         return self.object.raw
 
     @staticmethod
@@ -82,6 +88,7 @@ class WebRequest:
         :return:
         """
         response = WebRequest(url=url, method='HEAD', headers=headers)
+
         return response.object.headers
 
     def get_json_response(self):
@@ -104,7 +111,7 @@ class WebRequest:
         :param dest_filename:
         :return:
         """
-        self.update_object()
+        self._update_object()
 
         with self.object(self.url, headers=self.headers, data=self.payload, stream=True) as req:
             with open(dest_filename, 'wb') as file:
