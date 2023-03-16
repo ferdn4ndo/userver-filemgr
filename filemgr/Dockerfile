@@ -48,6 +48,6 @@ RUN set -ex \
 
 ADD . /code/
 
-EXPOSE 9905
+EXPOSE 5000
 
 CMD ["/bin/sh", "entrypoint.sh"]

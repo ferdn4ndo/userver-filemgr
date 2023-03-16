@@ -11,7 +11,7 @@ services:
       - ./tmp:/tmp
       - ./local:/storages/local
     expose:
-      - 9905
+      - 5000
     env_file:
       - ./filemgr/.env
   userver-filemgr-qcluster:
