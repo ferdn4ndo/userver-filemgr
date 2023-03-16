@@ -44,7 +44,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
-    'api.services.cors.CorsMiddleware',
+    'api.services.cors.cors_middleware_service.CorsMiddlewareService',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -108,6 +108,10 @@ STATIC_URL = '/static/'
 
 STATIC_ROOT = os.path.join(BASE_DIR, 'static')  # noqa: F405
 
+STATICFILES_DIRS = [
+    os.path.join (BASE_DIR, 'public'),
+]
+
 STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.ManifestStaticFilesStorage'
 
 APPEND_SLASH = False
@@ -131,6 +135,25 @@ REST_FRAMEWORK = {
     'PAGE_SIZE': 10,
 }
 
+REDIS_HOST = os.getenv('USERVER_REDIS_HOST', 'userver-redis')
+REDIS_PORT = int(os.getenv('USERVER_REDIS_PORT', '6379'))
+REDIS_DATABASE_DJANGO = int(os.getenv('USERVER_REDIS_DATABASE_DJANGO', '1'))
+REDIS_DATABASE_QCLUSTER = int(os.getenv('USERVER_REDIS_DATABASE_QCLUSTER', '2'))
+
+CACHES = {
+    'default': {
+        'BACKEND': 'django_redis.cache.RedisCache',
+        'LOCATION': f"redis://{REDIS_HOST}:{REDIS_PORT}/{REDIS_DATABASE_DJANGO}",
+        'OPTIONS': {
+            'CLIENT_CLASS': 'django_redis.client.DefaultClient'
+        },
+        'KEY_PREFIX': 'filemgr'
+    }
+}
+
+SESSION_ENGINE = "django.contrib.sessions.backends.cache"
+SESSION_CACHE_ALIAS = "default"
+
 Q_CLUSTER = {
     'name': 'uServerFileMgr',
     'workers': 8,
@@ -140,10 +163,10 @@ Q_CLUSTER = {
     'save_limit': 250,
     'queue_limit': 500,
     'cpu_affinity': 1,
-    'label': 'uServer-FileMgr',
+    'label': 'uServerFileMgr',
     'redis': {
-        'host': os.getenv('USERVER_REDIS_HOST', 'userver-redis'),
-        'port': int(os.getenv('USERVER_REDIS_PORT', '6379')),
-        'db': int(os.getenv('USERVER_REDIS_DATABASE', '1')),
+        'host': REDIS_HOST,
+        'port': REDIS_PORT,
+        'db': REDIS_DATABASE_QCLUSTER,
     }
 }
