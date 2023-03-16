@@ -48,7 +48,7 @@ class LocalStorageDriver(GenericStorageDriver):
         """
         copyfile(remote_path, local_dest)
 
-    def get_download_url(self, file: StorageFile, expiration_seconds: int = 3600, force_download: bool = False):
+    def generate_download_url(self, file: StorageFile, expiration_seconds: int = 3600, force_download: bool = False) -> str:
         """
         Retrieve an expirable download url for a given storage file
         :param file: the StorageFile model to be downloaded

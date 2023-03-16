@@ -35,8 +35,8 @@ class MediaFileService:
     def _process_video_file(self):
         pass
 
-    def process_media_file(self):
-        if self.storage_file.status != StorageFile.FileStatus.UPLOADED:
+    def process_media_file(self, force: bool = False):
+        if not force and self.storage_file.status != StorageFile.FileStatus.UPLOADED:
             self.logger.warning(
                 f"Media processing skipped file {self.storage_file.id}"
                 f" as its status is '{self.storage_file.status}'"
@@ -51,7 +51,10 @@ class MediaFileService:
 
         self._publish_file()
 
-
-        print("THE FILE WOULD BE PROCESSED NOW")
-
         return self.storage_file
+
+    def process_if_is_media_file(self, force: bool = False):
+        if self.is_media_file():
+            self.process_media_file(force=force)
+        else:
+            self.logger.info(f"File id {self.storage_file.id} processing skipped as it's not media!")

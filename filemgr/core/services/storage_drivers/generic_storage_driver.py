@@ -5,6 +5,7 @@ from typing import Union
 from urllib.parse import urlparse
 
 import magic
+from django.core.cache import cache
 from django.core.files.uploadedfile import TemporaryUploadedFile, InMemoryUploadedFile
 from django.forms import model_to_dict
 from django.utils.translation import gettext_lazy as _
@@ -71,8 +72,30 @@ class GenericStorageDriver(ABC):
         """
         raise NotImplementedError(Messages.MSG_TO_BE_IMPLEMENTED)
 
-    @abstractmethod
     def get_download_url(self, file: StorageFile, expiration_seconds: int = 3600, force_download: bool = False):
+        """
+        Retrieve an expirable download url for a given storage file (value is cached while not expired)
+        :param file: the StorageFile model to be downloaded
+        :param force_download: if the file download should be enforced (not rendered)
+        :param expiration_seconds: time in seconds for the URL to remain valid. 0 for the infinite and beyond.
+        :return:
+        """
+        key = f'download_url_{"DOWNLOAD" if force_download else "INLINE"}_{file.id}'
+        cached_value = cache.get(key)
+        if cached_value is not None:
+            return cached_value
+
+        url = self.generate_download_url(
+            file=file,
+            expiration_seconds=expiration_seconds,
+            force_download=force_download,
+        )
+        cache.set(key, url, expiration_seconds)
+
+        return url
+
+    @abstractmethod
+    def generate_download_url(self, file: StorageFile, expiration_seconds: int = 3600, force_download: bool = False) -> str:
         """
         Retrieve an expirable download url for a given storage file
         :param file: the StorageFile model to be downloaded
@@ -463,7 +486,9 @@ class GenericStorageDriver(ABC):
         url_info = WebRequestService.get_url_info(url=file_url)
         url_address_parser = urlparse(file_url)
 
-        file.size = int(url_info['Content-Length'])
+        if 'Content-Length' in url_info:
+            file.size = int(url_info['Content-Length'])
+
         file.type = StorageFileMimeType.from_mime_type(url_info['Content-Type'])
         file.origin = StorageFile.FileOrigin.WEB
         file.original_path = file_url

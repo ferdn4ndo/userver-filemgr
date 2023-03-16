@@ -76,7 +76,7 @@ class AmazonS3StorageDriver(GenericStorageDriver):
             filename=local_dest,
         )
 
-    def get_download_url(self, file: StorageFile, expiration_seconds: int = 3600, force_download: bool = False):
+    def generate_download_url(self, file: StorageFile, expiration_seconds: int = 3600, force_download: bool = False) -> str:
         """
         Generate a presigned URL to share an S3 object from a StorageFile
         :param file: The StorageFile model to be downloaded
@@ -99,11 +99,13 @@ class AmazonS3StorageDriver(GenericStorageDriver):
             params['ResponseContentType'] = file.type.mime_type
 
         try:
-            return s3.meta.client.generate_presigned_url('get_object', Params=params, ExpiresIn=expiration_seconds)
+            url = s3.meta.client.generate_presigned_url('get_object', Params=params, ExpiresIn=expiration_seconds)
 
         except ClientError as e:
             logging.error(e)
             return None
+
+        return str(url)
 
     def perform_delete(self, file: StorageFile):
         """

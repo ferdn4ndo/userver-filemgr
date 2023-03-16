@@ -31,42 +31,45 @@ class UServerAuthenticationService(authentication.BaseAuthentication):
     def __init__(self):
         self.logger = get_logger(__name__)
 
-    def authenticate(self, request: http.request) -> [tuple]:
+    def authenticate(self, request: http.request) -> tuple:
         """
         Authenticate the request and return a two-tuple of (user, token).
         :param request:
         :return: Tuple
         """
-        auth = get_authorization_header(request).split()
+        auth_parts = get_authorization_header(request).split()
 
-        if not auth:
+        if not auth_parts:
             self.logger.debug("Invalid token header (no auth header)")
 
             return None
 
-        auth_keyword = auth[0].decode('utf-8')
-        if auth_keyword.lower() != self.keyword.lower():
-            self.logger.debug(f"Invalid token value prefix (expecting '{self.keyword}', got '{auth_keyword}')")
-
-            return None
-
-        if len(auth) == 1:
-            self.logger.debug("Invalid token header (auth header words == 1)")
-            msg = _('Invalid token header. No credentials provided.')
-            raise NotAuthenticatedException(msg)
-        elif len(auth) > 2:
-            self.logger.debug("Invalid token header (auth header words > 2)")
-            msg = _('Invalid token header. Token string should not contain spaces.')
-            raise NotAuthenticatedException(msg)
+        self._check_auth_header_parts(auth_parts=auth_parts)
 
         try:
-            token = auth[1].decode()
+            token = auth_parts[1].decode()
         except UnicodeError:
             self.logger.debug("Invalid token header (unicode error)")
             msg = _('Invalid token header. Token string should not contain invalid characters.')
             raise NotAuthenticatedException(msg)
 
         return self.authenticate_credentials(token)
+
+    def _check_auth_header_parts(self, auth_parts: list) -> None:
+        auth_keyword = auth_parts[0].decode('utf-8')
+        if auth_keyword.lower() != self.keyword.lower():
+            self.logger.debug(f"Invalid token value prefix (expecting '{self.keyword}', got '{auth_keyword}')")
+
+            return None
+
+        if len(auth_parts) == 1:
+            self.logger.debug("Invalid token header (auth header words == 1)")
+            msg = _('Invalid token header. No credentials provided.')
+            raise NotAuthenticatedException(msg)
+        elif len(auth_parts) > 2:
+            self.logger.debug("Invalid token header (auth header words > 2)")
+            msg = _('Invalid token header. Token string should not contain spaces.')
+            raise NotAuthenticatedException(msg)
 
     def analyse_token(self, token: str) -> dict:
         """
@@ -178,7 +181,6 @@ class UServerAuthenticationService(authentication.BaseAuthentication):
         access_token = admin_login_data['access_token']
 
         url = self.get_auth_url(f'systems/{system_name}/users/{username}')
-        print(url)
 
         user_request = WebRequestService(
             url=url,
@@ -187,16 +189,15 @@ class UServerAuthenticationService(authentication.BaseAuthentication):
               'Authorization': f'Bearer {access_token}'
             },
         )
-        print(user_request.get_raw().data)
-
         user_response = user_request.get_json_response()
         status_code = user_request.get_status_code()
 
         if status_code != 200:
             self.logger.warning(
-                f"The user with system_name '{system_name}' "
-                f"and username '{username}' returned status"
-                f"code {status_code} from uServer-Auth!"
+                f"The user with system_name '{system_name}'"
+                f" and username '{username}' returned status"
+                f" code {status_code} from uServer-Auth!"
+                f" Response Payload: {user_response}"
             )
             raise ModelNotFoundException("The given user was not found!")
 
@@ -229,6 +230,7 @@ class UServerAuthenticationService(authentication.BaseAuthentication):
             'password': password
         })
         reg_response = reg_request.get_json_response()
+
         return reg_response
 
     def perform_login(self, username: str, password: str) -> Dict:
