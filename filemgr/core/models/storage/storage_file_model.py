@@ -8,17 +8,17 @@ from django.db import models
 from django.db.models import Q
 from django.utils.translation import gettext_lazy as _
 
+from core.models.generic_audited_model import GenericAuditedModel
 from core.services.strings.strings_service import StringsService
 from core.services.translation.translation_service import Messages
 
-from core.models.generic_model import GenericModel
 from core.models.storage.storage_file_mime_type_model import StorageFileMimeType
 from core.models.storage.storage_model import Storage
 from core.models.user.user_model import CustomUser
 
 
 
-class StorageFile(GenericModel):
+class StorageFile(GenericAuditedModel):
     """
     StorageFile resource model
     """
@@ -98,27 +98,8 @@ class StorageFile(GenericModel):
     )
     available = models.BooleanField(default=True, verbose_name=_("If the file is remotely available"))
     excluded = models.BooleanField(default=False, verbose_name=_("If the file was marked as excluded in the interface"))
-    created_by = models.ForeignKey(
-        to=CustomUser,
-        on_delete=models.SET_NULL,
-        null=True,
-        related_name="storage_file_creator",
-    )
-    created_at = models.DateTimeField(auto_now_add=True, verbose_name=_("Record creation timestamp"))
-    updated_by = models.ForeignKey(
-        to=CustomUser,
-        on_delete=models.SET_NULL,
-        null=True,
-        related_name="storage_file_editor",
-    )
-    updated_at = models.DateTimeField(auto_now=True, verbose_name=_("Record last update timestamp"))
-
-    def __str__(self) -> str:
-        """
-        Retrieves the string representation of the class
-        :return:
-        """
-        return "<File {} #{}>".format(self.virtual_path, self.id)
+    # download_url =
+    # download_url_expires_at =
 
     def get_temp_file_path(self) -> str:
         """
