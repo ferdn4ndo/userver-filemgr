@@ -10,6 +10,15 @@ tmp/*
 # Log files
 logs/*
 !logs/.gitkeep
+!tmp/.gitkeep
+
+# Local Storage files
+local/*
+!local/.gitkeep
+
+# Static files
+filemgr/static/*
+!filemgr/static/.gitkeep
 
 # Environments
 .env
