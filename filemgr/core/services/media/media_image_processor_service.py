@@ -118,7 +118,7 @@ class MediaImageProcessorService:
         size_tag = self.get_size_tag_from_dimensions(width=resize_width, height=resize_height)
 
         with Image.open(self.temp_file_path) as image:
-            resized_image = image.resize((resize_width, resize_height), Image.ANTIALIAS)
+            resized_image = image.resize((resize_width, resize_height), Image.Resampling.LANCZOS)
 
             ImageOverlayService(
                 configuration=self.media_convert_configuration,
@@ -138,17 +138,6 @@ class MediaImageProcessorService:
         size_factor = expected_width/self.original_width if self.original_height > self.original_width else expected_height/self.original_height
 
         return round(self.original_width * size_factor), round(self.original_height * size_factor)
-
-    def create_resized_file_resource(self) -> StorageFile:
-        resized_storage_file = self.driver.create_empty_file_resource(user=self.storage_file.created_by)
-        resized_storage_file.owner = self.storage_file.owner
-        resized_storage_file.exif_metadata = self.storage_file.exif_metadata
-        resized_storage_file.custom_metadata = self.storage_file.custom_metadata
-        resized_storage_file.name = self.storage_file.name
-        resized_storage_file.original_path = self.storage_file.original_path
-        resized_storage_file.visibility = self.storage_file.visibility
-
-        return resized_storage_file
 
     def create_thumbnails(self):
         thumbnail_sizes = [
@@ -197,7 +186,7 @@ class MediaImageProcessorService:
     ):
         resized_file_folder = os.path.join(tempfile.gettempdir(), "resized", size_tag)
         Path(resized_file_folder).mkdir(parents=True, exist_ok=True)
-        resized_file_path = os.path.join(resized_file_folder, str(self.storage_file.id))
+        resized_file_path = os.path.join(resized_file_folder, f"{self.storage_file.id}.jpg")
         image.save(fp=resized_file_path, format="JPEG", quality=quality)
 
         thumbnail_storage_file = self.driver.perform_basic_upload_operations(

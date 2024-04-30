@@ -99,15 +99,13 @@ class StorageFile(GenericAuditedModel):
     )
     available = models.BooleanField(default=True, verbose_name=_("If the file is remotely available"))
     excluded = models.BooleanField(default=False, verbose_name=_("If the file was marked as excluded in the interface"))
-    # download_url =
-    # download_url_expires_at =
 
     def get_temp_file_path(self) -> str:
         """
         Retrieve a local temp path for the file
         :return: the temp file path
         """
-        return os.path.join(tempfile.gettempdir(), str(self.id))
+        return os.path.join(tempfile.gettempdir(), f"{self.id}.{self.extension}")
 
     def get_filename_from_virtual_path(self):
         """
