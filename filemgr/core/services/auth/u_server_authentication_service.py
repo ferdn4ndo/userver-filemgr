@@ -114,7 +114,7 @@ class UServerAuthenticationService(authentication.BaseAuthentication):
 
         response_data = self.analyse_token(token)
 
-        user = UServerAuthenticationService.create_user_from_email(
+        user = self.create_user_from_email(
             email=response_data['username'],
             system_name=response_data['system_name'],
             is_admin=response_data['is_admin'],
@@ -129,13 +129,22 @@ class UServerAuthenticationService(authentication.BaseAuthentication):
 
         return user, token
 
-    @staticmethod
-    def create_user_from_email(email: str, system_name: str, is_admin: bool = False) -> CustomUser:
+    def get_or_create_user_from_username(self, username: str) -> CustomUser:
+        try:
+            user, created = CustomUser.objects.get_or_create(username=username)
+            self.logger.debug(f"Got one User ID {user.id} from username {username} (created={created})")
+        except CustomUser.MultipleObjectsReturned:
+            user = CustomUser.objects.filter(username=username).first()
+            self.logger.warning(f"Got multiple User ID from username {username} (user_id={user.id})")
+
+        return user
+
+    def create_user_from_email(self, email: str, system_name: str, is_admin: bool = False) -> CustomUser:
         """
         Create a user (or update the existing one) based on the USever-Auth response data
         :return:
         """
-        user, created = CustomUser.objects.get_or_create(username=email)
+        user = self.get_or_create_user_from_username(username=email)
         user.system_name = system_name
         user.is_admin = is_admin
         user.last_activity_at = timezone.now()
@@ -143,8 +152,7 @@ class UServerAuthenticationService(authentication.BaseAuthentication):
 
         return user
 
-    @staticmethod
-    def get_auth_url(endpoint: str = 'me') -> str:
+    def get_auth_url(self, endpoint: str = 'me') -> str:
         """
         Generates the route to uServer-Auth
         :return: str The route
@@ -250,7 +258,7 @@ class UServerAuthenticationService(authentication.BaseAuthentication):
         if 'access_token' not in login_response_data:
             raise NotAuthenticatedException(_("Failed to login with user."))
 
-        user, created = CustomUser.objects.get_or_create(username=username)
+        user = self.get_or_create_user_from_username(username=username)
         user.set_password(password)
         user.save()
         login_response_data['user_id'] = user.id
