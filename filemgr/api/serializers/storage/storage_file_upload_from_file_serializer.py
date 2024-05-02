@@ -11,6 +11,10 @@ class StorageFileUploadFromFileSerializer(serializers.Serializer):
         choices=StorageFile.FileVisibility.choices,
         default=StorageFile.FileVisibility.USER
     )
+    custom_metadata = serializers.JSONField(
+        required=False,
+        allow_null=True,
+    )
 
     def update(self, instance, validated_data):
         """

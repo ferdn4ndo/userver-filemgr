@@ -118,7 +118,8 @@ class MediaImageProcessorService:
         size_tag = self.get_size_tag_from_dimensions(width=resize_width, height=resize_height)
 
         with Image.open(self.temp_file_path) as image:
-            resized_image = image.resize((resize_width, resize_height), Image.Resampling.LANCZOS)
+            temp_image = image.copy()
+            resized_image = temp_image.resize((resize_width, resize_height), Image.Resampling.LANCZOS)
 
             ImageOverlayService(
                 configuration=self.media_convert_configuration,
@@ -193,7 +194,8 @@ class MediaImageProcessorService:
             user=self.storage_file.owner,
             path=resized_file_path,
             name=self.storage_file.name,
-            virtual_path=f"resized/{size_tag}/{self.storage_file.virtual_path}",
+            filename=f"{self.storage_file.id}.jpg",
+            virtual_path=f"resized/{size_tag}/{self.storage_file.id}.jpg",
             original_path=self.storage_file.original_path,
             origin=StorageFile.FileOrigin.SYSTEM,
             overwrite=True,

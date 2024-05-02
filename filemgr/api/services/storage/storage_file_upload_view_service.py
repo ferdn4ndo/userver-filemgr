@@ -40,6 +40,7 @@ class StorageFileUploadViewService:
                 visibility=data['visibility'] if 'visibility' in data else StorageFile.FileVisibility.USER,
                 virtual_path=data['virtual_path'],
                 overwrite=data['overwrite'] if 'overwrite' in data else False,
+                custom_metadata=data['custom_metadata'] if 'custom_metadata' in data else None,
             )
         except FileExistsError:
             raise ConflictException(Messages.MGS_FILE_EXISTS_NO_OVERWRITE)
@@ -70,6 +71,7 @@ class StorageFileUploadViewService:
                 virtual_path=data['virtual_path'],
                 overwrite=data['overwrite'] if 'overwrite' in data else False,
                 is_url=True,
+                custom_metadata=data['custom_metadata'] if 'custom_metadata' in data else None,
             )
         except FileExistsError:
             raise ConflictException(Messages.MGS_FILE_EXISTS_NO_OVERWRITE)

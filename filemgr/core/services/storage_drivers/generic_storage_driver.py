@@ -18,6 +18,7 @@ from core.models.storage.storage_file_model import StorageFile
 from core.models.storage.storage_model import Storage
 from core.models.user.user_model import CustomUser
 from core.services.file.file_service import FileService
+from core.services.logger.logger_service import get_logger
 from core.services.media.media_file_service import MediaFileService
 from core.services.message_broker.message_broker_service import MessageBrokerService
 from core.services.photo.photo_exif_service import PhotoExifService
@@ -34,6 +35,7 @@ class GenericStorageDriver(ABC):
         """
         Class constructor
         """
+        self.logger = get_logger(__name__)
         self.storage = storage
 
     @abstractmethod
@@ -124,7 +126,7 @@ class GenericStorageDriver(ABC):
         """
         raise NotImplementedError(Messages.MSG_TO_BE_IMPLEMENTED)
 
-    def get_real_remote_path(self, file: StorageFile, subfolder: str = None) -> str:
+    def get_real_remote_path(self, file: StorageFile, subfolder: str = None, filename: str = None) -> str:
         """
         Get the real remote path for a StoreFile (usually different from the 'visual' remote_path)
         :param file: the file to retrieve the path
@@ -140,7 +142,9 @@ class GenericStorageDriver(ABC):
         if subfolder:
             path_parts.append(subfolder)
 
-        path_parts.append(f"{str(file.id)}{file.extension}")
+        if not filename:
+            filename = f"{str(file.id)}{file.extension}"
+        path_parts.append(filename)
 
         return os.path.join(*path_parts)
 
@@ -161,6 +165,7 @@ class GenericStorageDriver(ABC):
             overwrite: bool = False,
             visibility: str = StorageFile.FileVisibility.USER,
             is_url: bool = False,
+            custom_metadata: dict = None,
     ) -> StorageFile:
         """
         Upload a file from a local path or a URL. Please do not modify this method. Instead, put the storage-specific
@@ -174,6 +179,7 @@ class GenericStorageDriver(ABC):
         :param overwrite: if the file should be replaced in case the remote path already exists
         :param visibility: file visibility (one of StorageFile.FileVisibility options)
         :param is_url: if the "path" argument is a URL (True) or a local file path (False)
+        :param custom_metadata: (optional) a JSON-encoded string containing the custom metadata of the file
         :return:
         """
         storage_file = self.perform_basic_upload_operations(
@@ -186,6 +192,7 @@ class GenericStorageDriver(ABC):
             overwrite=overwrite,
             visibility=visibility,
             is_url=is_url,
+            custom_metadata=custom_metadata,
         )
 
         # Process media file
@@ -199,6 +206,7 @@ class GenericStorageDriver(ABC):
             user: CustomUser,
             path: str,
             name: str = "",
+            filename: str = None,
             virtual_path: str = "",
             original_path: str = "",
             origin: str = StorageFile.FileOrigin.UNKNOWN,
@@ -206,6 +214,7 @@ class GenericStorageDriver(ABC):
             visibility: str = StorageFile.FileVisibility.USER,
             is_url: bool = False,
             size_tag: str = "",
+            custom_metadata: dict = None,
     ) -> StorageFile:
         storage_file = self.create_empty_file_resource(user)
         storage_file.origin = origin
@@ -215,7 +224,10 @@ class GenericStorageDriver(ABC):
         storage_file.original_path = original_path
         storage_file.owner = user
         storage_file.virtual_path = self.generate_virtual_path(storage_file, virtual_path=virtual_path, is_url=is_url)
-        storage_file.real_path = self.get_real_remote_path(storage_file)
+        # storage_file.real_path = self.get_real_remote_path(storage_file)
+
+        if custom_metadata is not None:
+            storage_file.custom_metadata = custom_metadata
 
         # Check if the virtual_path (where the file should be uploaded) doesn't already exist
         self.check_if_virtual_path_exists(storage_file.virtual_path, raise_ex_if_yes=not overwrite)
@@ -231,7 +243,8 @@ class GenericStorageDriver(ABC):
         # Perform the upload by calling the appropriate method
         file_real_path = self.get_real_remote_path(
             file=storage_file,
-            subfolder=None if not size_tag else f"resized/{size_tag}"
+            subfolder=None if not size_tag else f"resized/{size_tag}",
+            filename=filename
         )
         if is_url:
             self.perform_upload_from_url(url=path, remote_path=file_real_path)
@@ -246,6 +259,8 @@ class GenericStorageDriver(ABC):
         storage_file.status = StorageFile.FileStatus.UPLOADED
         storage_file.save()
 
+        self.logger.info(f"Successfully uploaded file ID {storage_file.id} to {file_real_path}!")
+
         return storage_file
 
     def upload_from_request_file(
@@ -257,6 +272,7 @@ class GenericStorageDriver(ABC):
             overwrite: bool = False,
             visibility: str = StorageFile.FileVisibility.USER,
             is_url: bool = False,
+            custom_metadata: dict = None,
     ) -> StorageFile:
         """
         Upload a file from an upload request file object. In case it's in memory (for small files), persists the file
@@ -268,6 +284,7 @@ class GenericStorageDriver(ABC):
         :param overwrite: if the file should be replaced in case the remote path already exists
         :param visibility: file visibility (one of StorageFile.FileVisibility options)
         :param is_url: if the "path" argument is a URL (True) or a local file path (False)
+        :param custom_metadata: (optional) a JSON-encoded string containing the custom metadata of the file
         :return:
         """
         if isinstance(request_file, TemporaryUploadedFile):
@@ -287,7 +304,8 @@ class GenericStorageDriver(ABC):
             virtual_path=virtual_path,
             overwrite=overwrite,
             visibility=visibility,
-            is_url=is_url
+            is_url=is_url,
+            custom_metadata=custom_metadata,
         )
 
         storage_file.save()
