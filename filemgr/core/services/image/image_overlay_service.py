@@ -1,15 +1,18 @@
 import math
 import os
+import re
+from datetime import datetime
 
 from PIL import ImageDraw, ImageFont
 from PIL.Image import Image
 
 from api.settings import BASE_DIR
+from core.services.logger.logger_service import get_logger
 
 
 class ImageOverlayService:
     BAR_HEIGHT_PX=20
-    BAR_HEIGHT_RATIO=0.02
+    BAR_HEIGHT_RATIO=0.03
 
     INFO_BAR_COLOR_BACKGROUND='#11141A'
     INFO_BAR_COLOR_FOREGROUND='#FEFEFE'
@@ -24,14 +27,32 @@ class ImageOverlayService:
     INFO_BAR_KEY_BACKGROUND_COLOR='background_color'
 
     def __init__(self, image: Image, configuration: dict, metadata: dict = None):
+        self.logger = get_logger(__name__)
+
         if metadata is None:
             metadata = {}
 
-        self.font_path = os.path.join(BASE_DIR, 'public', 'fonts', 'yantramanav', 'Yantramanav-Bold.ttf')
+        self.font_path = os.path.join(BASE_DIR, 'public', 'fonts', 'yantramanav', 'Yantramanav-Black.ttf')
 
         self.configuration = configuration
         self.image = image
         self.metadata = metadata
+
+        self.text_tags_map = self._prepare_text_tags_map()
+
+    def _prepare_text_tags_map(self):
+        mapping = {}
+
+        for key in self.metadata:
+            mapping[f'metadata.{key}'] = self.metadata[key]
+
+        mapping['YEAR'] = datetime.now().year
+        mapping['MONTH'] = datetime.now().month
+        mapping['DAY'] = datetime.now().day
+
+        self.logger.debug(f"Text tags mapping: {mapping}")
+
+        return mapping
 
     def _get_configuration_key(self, group: str, key: str, default = None):
         if group not in self.configuration:
@@ -95,9 +116,14 @@ class ImageOverlayService:
             return
 
         draw = ImageDraw.Draw(self.image)
-        half_bar_px = math.floor(self._compute_bar_height() / 2.0)
+        half_bar_px = math.ceil(0.5 * self._compute_bar_height())
+        font_size = math.ceil(0.8 * self._compute_bar_height())
 
-        draw.font = ImageFont.truetype(self.font_path, size=half_bar_px)
+        self.logger.info(f"Bar height: {self._compute_bar_height()} px")
+        self.logger.info(f"Half bar: {half_bar_px} px")
+        self.logger.info(f"Font size: {font_size} px")
+
+        draw.font = ImageFont.truetype(self.font_path, size=font_size)
 
         text_y = float(self.image.height - half_bar_px) if position == self.INFO_BAR_POSITION_BOTTOM else half_bar_px
 
@@ -106,6 +132,7 @@ class ImageOverlayService:
                 xy=(10, text_y),
                 text=self._process_image_info_text(left_text),
                 anchor="lm",
+                fill=(222,222,222),
             )
 
         if center_text != "":
@@ -113,6 +140,7 @@ class ImageOverlayService:
                 xy=(self.image.width / 2, text_y),
                 text=self._process_image_info_text(center_text),
                 anchor="mm",
+                fill=(222,222,222),
             )
 
         if right_text != "":
@@ -120,7 +148,14 @@ class ImageOverlayService:
                 xy=(self.image.width - 10, text_y),
                 text=self._process_image_info_text(right_text),
                 anchor="rm",
+                fill=(222,222,222),
             )
 
     def _process_image_info_text(self, input_text: str) -> str:
+        occurrences = re.findall(r'\{(.*?)\}', input_text)
+
+        for occurrence in occurrences:
+            if occurrence in self.text_tags_map:
+                input_text = input_text.replace(f"{{{occurrence}}}", str(self.text_tags_map[occurrence]))
+
         return input_text
