@@ -7,7 +7,7 @@ from core.models import Storage, StorageFile
 
 
 class StorageSerializer(serializers.ModelSerializer):
-    credentials = serializers.JSONField(required=True, write_only=True, encoder=JSONEncoder)
+    credentials = serializers.JSONField(allow_null=True, required=False, write_only=True, encoder=JSONEncoder)
     total_size = serializers.SerializerMethodField()
 
     class Meta:
