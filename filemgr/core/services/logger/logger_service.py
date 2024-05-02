@@ -25,9 +25,10 @@ def get_logger(name: str) -> logging.Logger:
         )
     )
 
-    logger_console_handler = logging.StreamHandler(sys.stdout)
-    logger_console_handler.setLevel(log_level)
-    logger_console_handler.setFormatter(logger_formatter)
-    logger.addHandler(logger_console_handler)
+    if not logger.hasHandlers():
+        logger_console_handler = logging.StreamHandler(sys.stdout)
+        logger_console_handler.setLevel(log_level)
+        logger_console_handler.setFormatter(logger_formatter)
+        logger.addHandler(logger_console_handler)
 
     return logger
