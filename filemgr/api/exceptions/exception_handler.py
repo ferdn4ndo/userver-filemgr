@@ -32,13 +32,14 @@ def custom_exception_handler(exception: Exception, context):
     elif isinstance(exception, ModelNotFoundException):
         exception = NotFoundException(exception.detail)
     elif isinstance(exception, exceptions.PermissionDenied):
-        exception = PermissionDeniedException(exception.detail)
+        # Use app message text; DRF's default ("You do not have permission...") breaks API contract tests.
+        exception = PermissionDeniedException()
     elif isinstance(exception, AuthorizationRuleException):
         exception = PermissionDeniedException(exception.detail)
     elif isinstance(exception, exceptions.NotAuthenticated):
-        exception = NotAuthenticatedException(exception.detail)
+        exception = NotAuthenticatedException()
     elif isinstance(exception, exceptions.AuthenticationFailed):
-        exception = NotAuthenticatedException(exception.detail)
+        exception = NotAuthenticatedException()
     elif isinstance(exception, exceptions.ValidationError):
         exception = BadRequestException(detail=exception.detail)
     elif isinstance(exception, ValidationError):

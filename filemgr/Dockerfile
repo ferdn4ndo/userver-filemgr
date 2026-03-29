@@ -1,4 +1,4 @@
-FROM python:3-alpine
+FROM python:3.12-alpine
 LABEL maintaner="Fernando Constantino <const.fernando@gmail.com>"
 
 # Based on https://www.caktusgroup.com/blog/2017/03/14/production-ready-dockerfile-your-python-django-app/
@@ -50,4 +50,6 @@ ADD . /code/
 
 EXPOSE 5000
 
-CMD ["/bin/sh", "entrypoint.sh"]
+RUN chmod +x /code/entrypoint.sh /code/setup.sh
+
+CMD ["/bin/bash", "entrypoint.sh"]

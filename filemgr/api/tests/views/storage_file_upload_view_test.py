@@ -1,13 +1,15 @@
 import os
-
+import unittest
 from typing import Dict
 
 from django.core.files.uploadedfile import SimpleUploadedFile
 
-from app.models import StorageFile, Storage
-from app.serializers import StorageFileSerializer
-from app.tests import dataset, generic
-from app.views import StorageFileUploadView, StorageFileUploadUrlView
+from api.serializers.storage.storage_file_serializer import StorageFileSerializer
+from api.tests import dataset
+from api.tests import generic
+from api.views.storage.storage_file_upload_from_file_view import StorageFileUploadView
+from api.views.storage.storage_file_upload_from_url_view import StorageFileUploadUrlView
+from core.models import Storage, StorageFile
 
 
 class StorageFileUploadGenericTest:
@@ -63,6 +65,10 @@ class StorageFileUploadGenericTest:
             super().tearDown()
 
 
+@unittest.skipUnless(
+    os.environ.get("RUN_S3_UPLOAD_TESTS") == "1",
+    "Set RUN_S3_UPLOAD_TESTS=1 and valid TEST_AWS_S3_* credentials to run S3 upload integration tests.",
+)
 class StorageFileUploadAmazonViewSetCreateTest(StorageFileUploadGenericTest.GenericUploadTest):
     storage_type = Storage.StorageType.STORAGE_S3
     from_url = True

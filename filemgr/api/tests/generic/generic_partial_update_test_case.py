@@ -1,9 +1,9 @@
 from rest_framework import status
 from rest_framework.test import force_authenticate
 
-from app.services.translation import Messages
-from app.tests import dataset
-from app.views import GenericModelViewSet
+from api.services.translation import Messages
+from api.tests import dataset
+from api.views.generic_model_view import GenericModelViewSet
 
 from .generic_test_case import GenericTestCase
 
@@ -26,9 +26,12 @@ class GenericPartialUpdateTestCase:
             force_authenticate(request, user=self.user)
             view = self.view.as_view({'patch': 'partial_update'})
             response = view(request, **self.request_args)
-            response.render()
+            self.finalize_response(response)
             self.check_http_response(response=response, expected_code=status.HTTP_200_OK)
-            self.check_single_resource_response(request=request, response_data=response.data)
+            self.check_single_resource_response(
+                request=request,
+                response_data=self.response_data(response),
+            )
 
         def test_patch_fail_not_logged(self) -> None:
             self.check_pre_conditions()
@@ -37,7 +40,7 @@ class GenericPartialUpdateTestCase:
             self.request_args['pk'] = self.model_real_id
             view = self.view.as_view({'patch': 'partial_update'})
             response = view(request, **self.request_args)
-            response.render()
+            self.finalize_response(response)
             self.check_http_response(
                 response=response,
                 expected_code=status.HTTP_401_UNAUTHORIZED,
@@ -56,7 +59,7 @@ class GenericPartialUpdateTestCase:
             force_authenticate(request, user=user_not_admin)
             view = self.view.as_view({'patch': 'partial_update'})
             response = view(request, **self.request_args)
-            response.render()
+            self.finalize_response(response)
             self.check_http_response(
                 response=response,
                 expected_code=status.HTTP_403_FORBIDDEN,
@@ -74,7 +77,7 @@ class GenericPartialUpdateTestCase:
             force_authenticate(request, user=self.user)
             view = self.view.as_view({'patch': 'partial_update'})
             response = view(request, **self.request_args)
-            response.render()
+            self.finalize_response(response)
             self.check_http_response(
                 response=response,
                 expected_code=status.HTTP_400_BAD_REQUEST,
@@ -92,7 +95,7 @@ class GenericPartialUpdateTestCase:
             force_authenticate(request, user=self.user)
             view = self.view.as_view({'patch': 'partial_update'})
             response = view(request, **self.request_args)
-            response.render()
+            self.finalize_response(response)
             self.check_http_response(
                 response=response,
                 expected_code=status.HTTP_404_NOT_FOUND,

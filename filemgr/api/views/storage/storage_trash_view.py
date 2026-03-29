@@ -4,12 +4,14 @@ from rest_framework.response import Response
 
 from api.models import get_object_or_404
 from api.policies.is_logged_in_policy import IsLoggedInPolicy
+from api.serializers.storage.storage_file_serializer import StorageFileSerializer
 from api.services.storage.storage_file_view_service import StorageFileViewService
 from api.views.generic_read_destroy_model_view import GenericReadDestroyModelViewSet
 from core.models import Storage, StorageFile
 
 
 class StorageTrashViewSet(GenericReadDestroyModelViewSet):
+    serializer_class = StorageFileSerializer
     permission_classes = [IsLoggedInPolicy]
 
     def get_queryset(self) -> QuerySet:

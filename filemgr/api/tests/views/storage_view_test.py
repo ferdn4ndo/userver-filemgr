@@ -1,9 +1,10 @@
 import uuid
 
-from app.models import Storage
-from app.serializers import StorageSerializer
-from app.tests import dataset, generic
-from app.views import StorageViewSet
+from api.serializers.storage.storage_serializer import StorageSerializer
+from api.tests import dataset
+from api.tests import generic
+from api.views.storage.storage_view import StorageViewSet
+from core.models import Storage
 
 
 class StorageViewSetCreateTest(generic.GenericCreateTestCases.CreateTest):

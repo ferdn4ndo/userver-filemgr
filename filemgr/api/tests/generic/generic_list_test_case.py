@@ -1,9 +1,9 @@
 from rest_framework import status
 from rest_framework.test import force_authenticate
 
-from app.services.translation import Messages
-from app.tests import dataset
-from app.views import GenericModelViewSet
+from api.services.translation import Messages
+from api.tests import dataset
+from api.views.generic_model_view import GenericModelViewSet
 
 from .generic_test_case import GenericTestCase
 
@@ -21,11 +21,11 @@ class GenericListTestCase:
             force_authenticate(request, user=self.user)
             view = self.view.as_view({'get': 'list'})
             response = view(request=request, **self.request_args)
-            response.render()
+            self.finalize_response(response)
             self.check_http_response(response=response, expected_code=status.HTTP_200_OK)
             self.check_list_resource_response(
                 request=request,
-                response_data=response.data,
+                response_data=self.response_data(response),
                 expected_count=self.expected_items
             )
 
@@ -34,7 +34,7 @@ class GenericListTestCase:
             request = self.factory.get(self.endpoint)
             view = self.view.as_view({'get': 'list'})
             response = view(request=request, **self.request_args)
-            response.render()
+            self.finalize_response(response)
             self.check_http_response(
                 response=response,
                 expected_code=status.HTTP_401_UNAUTHORIZED,
@@ -51,7 +51,7 @@ class GenericListTestCase:
             force_authenticate(request, user=user_not_admin)
             view = self.view.as_view({'get': 'list'})
             response = view(request=request, **self.request_args)
-            response.render()
+            self.finalize_response(response)
             self.check_http_response(
                 response=response,
                 expected_code=status.HTTP_403_FORBIDDEN,

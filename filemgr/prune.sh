@@ -9,7 +9,7 @@ read -p "Type 'Y' to continue or any other key to abort:" -n 1 -r
 echo    # (optional) move to a new line
 if [[ ! $REPLY =~ ^[Yy]$ ]]; then
   echo "Aborting."
-  [[ "$0" = "$BASH_SOURCE" ]] && exit 1 || return 1 # handle exits from shell or function but don't exit interactive shell
+  [[ "$0" = "${BASH_SOURCE[0]}" ]] && exit 1 || return 1
 fi
 
 echo "Deleting database and user..."
@@ -29,7 +29,18 @@ PGPASSWORD=${POSTGRES_ROOT_PASS} psql -h "${POSTGRES_HOST}" -U "${POSTGRES_ROOT_
 EOF
 
 echo "Removing migrations..."
-ls /code/api/migrations | grep -E "^[0-9]{4}_[0-9a-zA-Z_-]+.py$" | xargs -I STR rm /code/api/migrations/STR
-ls /code/core/migrations | grep -E "^[0-9]{4}_[0-9a-zA-Z_-]+.py$" | xargs -I STR rm /code/core/migrations/STR
+remove_numbered_migrations() {
+  local dir="$1" f base
+  (
+    shopt -s nullglob
+    for f in "${dir}"/[0-9][0-9][0-9][0-9]_*.py; do
+      base=$(basename "$f")
+      [[ "$base" =~ ^[0-9]{4}_[0-9a-zA-Z_-]+\.py$ ]] || continue
+      rm -- "$f"
+    done
+  )
+}
+remove_numbered_migrations /code/api/migrations
+remove_numbered_migrations /code/core/migrations
 
 echo "===== Prune Complete ====="

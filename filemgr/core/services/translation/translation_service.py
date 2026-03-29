@@ -24,7 +24,7 @@ class Messages:
     MSG_NO_STORAGE_READ_PERM = _("You don't have read permissions on this storage.")
     MSG_NO_STORAGE_WRITE_PERM = _("You don't have write permissions on this storage.")
     MSG_NOT_AUTHENTICATED = _("You must be authenticated to perform the requested operation.")
-    MSG_NOT_ENOUGH_PERMS = _("You don't have the required level of permissions to perform the requested operation.")
+    MSG_NOT_ENOUGH_PERMS = _("You don't have the required level of permissions to access this resource.")
     MSG_NOT_FOUND = _("The request resource wasn't found. Please double-check the identifiers.")
     MSG_ONE_OR_MORE_ERRORS_OCCURRED = _("One or more validation error occurred while handling the supplied data.")
     MSG_SUBSCRIPTION_NOT_ELIGIBLE = _("You don't have all the required conditions to subscribe.")

@@ -1,8 +1,8 @@
 from rest_framework import status
-from rest_framework.test import force_authenticate, APIRequestFactory
+from rest_framework.test import force_authenticate
 
-from app.services.translation import Messages
-from app.tests import dataset
+from api.services.translation import Messages
+from api.tests import dataset
 
 from .generic_test_case import GenericTestCase
 
@@ -17,25 +17,23 @@ class GenericCreateTestCases:
 
         def test_create_success(self) -> None:
             self.check_pre_conditions()
-            request = APIRequestFactory().request()
-            request.method = request.POST
-            request.data = self.payload_valid
-            request.META['Content-Type'] = 'application/json'
-            #request = self.factory.post(self.endpoint, self.payload_valid, format=self.request_data_format)
-            #force_authenticate(request, user=self.user)
-            #view = self.view.as_view({'post': 'create'})
+            request = self.factory.post(self.endpoint, self.payload_valid, format=self.request_data_format)
+            force_authenticate(request, user=self.user)
             view = self.view.as_view({'post': 'create'})
             response = view(request, **self.request_args)
-            response.render()
+            self.finalize_response(response)
             self.check_http_response(response=response, expected_code=status.HTTP_201_CREATED)
-            self.check_single_resource_response(request=request, response_data=response.data)
+            self.check_single_resource_response(
+                request=request,
+                response_data=self.response_data(response),
+            )
 
         def test_create_fail_not_logged(self) -> None:
             self.check_pre_conditions()
             request = self.factory.post(self.endpoint, self.payload_valid, format=self.request_data_format)
             view = self.view.as_view({'post': 'create'})
             response = view(request, **self.request_args)
-            response.render()
+            self.finalize_response(response)
             self.check_http_response(
                 response=response,
                 expected_code=status.HTTP_401_UNAUTHORIZED,
@@ -52,7 +50,7 @@ class GenericCreateTestCases:
             force_authenticate(request, user=user_not_admin)
             view = self.view.as_view({'post': 'create'})
             response = view(request, **self.request_args)
-            response.render()
+            self.finalize_response(response)
             self.check_http_response(
                 response=response,
                 expected_code=status.HTTP_403_FORBIDDEN,
@@ -68,7 +66,7 @@ class GenericCreateTestCases:
             force_authenticate(request, user=self.user)
             view = self.view.as_view({'post': 'create'})
             response = view(request, **self.request_args)
-            response.render()
+            self.finalize_response(response)
             self.check_http_response(
                 response=response,
                 expected_code=status.HTTP_400_BAD_REQUEST,
