@@ -1,5 +1,6 @@
+import json
 import os
-from typing import Dict
+from typing import Any, Dict
 
 from urllib.request import Request
 
@@ -8,10 +9,10 @@ from rest_framework import status, serializers
 from rest_framework.response import Response
 from rest_framework.test import APITestCase, APIRequestFactory
 
-from app.models import CustomUser
-from app.services.pagination import CustomPagination
-from app.tests import dataset
-from app.views import GenericModelViewSet
+from api.services.pagination import CustomPagination
+from api.tests import dataset
+from api.views.generic_model_view import GenericModelViewSet
+from core.models import CustomUser
 
 
 class GenericTestCase:
@@ -39,19 +40,38 @@ class GenericTestCase:
             if not hasattr(self, "view") or self.view is None:
                 self.fail("The parameter 'view' must be set (and not None)")
 
-        def check_http_response(self, response: Response, expected_code: int, expected_message: str = None):
-            if expected_message is not None:
-                self.assertIn('message', response.data)
-                self.assertEqual(response.data['message'], expected_message)
+        @staticmethod
+        def finalize_response(response) -> None:
+            render = getattr(response, 'render', None)
+            if callable(render):
+                render()
 
-                # should have only 'message' key for any other error than 400
-                self.assertEqual(len(response.data.keys()), 1 if expected_code != status.HTTP_400_BAD_REQUEST else 2)
+        def response_data(self, response) -> Dict[str, Any]:
+            if hasattr(response, 'data'):
+                return response.data
+            if getattr(response, 'status_code', None) == 204:
+                return {}
+            try:
+                raw = response.content
+                if not raw:
+                    return {}
+                return json.loads(raw.decode())
+            except (ValueError, TypeError, UnicodeDecodeError, AttributeError):
+                return {}
+
+        def check_http_response(self, response: Response, expected_code: int, expected_message: str = None):
+            data = self.response_data(response)
+            if expected_message is not None:
+                self.assertIn('message', data)
+                self.assertEqual(data['message'], expected_message)
+
+                self.assertEqual(len(data.keys()), 1 if expected_code != status.HTTP_400_BAD_REQUEST else 2)
 
                 if expected_code == status.HTTP_400_BAD_REQUEST:
-                    self.assertIn('errors', response.data)
+                    self.assertIn('errors', data)
             if response.status_code != expected_code:
                 self.fail("Status code {} is different then the expected {}. Response data: {}".format(
-                    response.status_code, expected_code, response.data
+                    response.status_code, expected_code, data
                 ))
 
         def get_endpoint_full_uri(self):

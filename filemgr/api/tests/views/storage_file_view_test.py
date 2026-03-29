@@ -1,9 +1,10 @@
 import uuid
 
-from app.models import StorageFile
-from app.serializers import StorageFileSerializer
-from app.tests import dataset, generic
-from app.views import StorageFileViewSet
+from api.serializers.storage.storage_file_serializer import StorageFileSerializer
+from api.tests import dataset
+from api.tests import generic
+from api.views.storage.storage_file_view import StorageFileViewSet
+from core.models import StorageFile
 
 
 class StorageFileViewSetDestroyTest(generic.GenericDestroyTestCase.DestroyTest):

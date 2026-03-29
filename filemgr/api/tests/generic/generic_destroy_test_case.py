@@ -1,9 +1,9 @@
 from rest_framework import status
 from rest_framework.test import force_authenticate
 
-from app.services.translation import Messages
-from app.tests import dataset
-from app.views import GenericModelViewSet
+from api.services.translation import Messages
+from api.tests import dataset
+from api.views.generic_model_view import GenericModelViewSet
 
 from .generic_test_case import GenericTestCase
 
@@ -23,7 +23,7 @@ class GenericDestroyTestCase:
             force_authenticate(request, user=self.user)
             view = self.view.as_view({'delete': 'destroy'})
             response = view(request=request, **self.request_args)
-            response.render()
+            self.finalize_response(response)
             self.check_http_response(response=response, expected_code=status.HTTP_204_NO_CONTENT)
 
         def test_destroy_fail_not_logged(self) -> None:
@@ -32,7 +32,7 @@ class GenericDestroyTestCase:
             self.request_args['pk'] = self.model_real_id
             view = self.view.as_view({'delete': 'destroy'})
             response = view(request=request, **self.request_args)
-            response.render()
+            self.finalize_response(response)
             self.check_http_response(
                 response=response,
                 expected_code=status.HTTP_401_UNAUTHORIZED,
@@ -45,11 +45,12 @@ class GenericDestroyTestCase:
 
             self.check_pre_conditions()
             user_not_admin = dataset.create_user(is_admin=False)
-            request = self.factory.delete(self.endpoint)
+            request = self.factory.delete("{}{}/".format(self.endpoint, self.model_real_id))
+            self.request_args['pk'] = self.model_real_id
             force_authenticate(request, user=user_not_admin)
             view = self.view.as_view({'delete': 'destroy'})
             response = view(request=request, **self.request_args)
-            response.render()
+            self.finalize_response(response)
             self.check_http_response(
                 response=response,
                 expected_code=status.HTTP_403_FORBIDDEN,
@@ -66,7 +67,7 @@ class GenericDestroyTestCase:
             force_authenticate(request, user=self.user)
             view = self.view.as_view({'delete': 'destroy'})
             response = view(request=request, **self.request_args)
-            response.render()
+            self.finalize_response(response)
             self.check_http_response(
                 response=response,
                 expected_code=status.HTTP_404_NOT_FOUND,

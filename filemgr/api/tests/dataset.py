@@ -2,11 +2,12 @@ import os
 import random
 import string
 import tempfile
+from datetime import timedelta
 from typing import Dict, List
 
-from app.drivers import load_storage_driver
-from app.models import Storage, StorageFile, CustomUser, StorageUser, StorageFileDownload
+from django.utils import timezone
 
+from core.models import Storage, StorageFile, CustomUser, StorageUser, StorageFileDownload
 from core.services.storage.storage_service import StorageService
 
 
@@ -121,7 +122,8 @@ def create_storage_users(
 def create_storage_file_download(file: StorageFile, user: CustomUser):
     download = StorageFileDownload(
         storage_file=file,
-        owner=user
+        owner=user,
+        expires_at=timezone.now() + timedelta(days=7),
     )
     download.save()
     return download

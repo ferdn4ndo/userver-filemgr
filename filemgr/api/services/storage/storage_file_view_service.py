@@ -22,7 +22,7 @@ class StorageFileViewService:
         if soft_delete:
             storage_file.excluded = True
             storage_file.created_at = timezone.now()
-            storage_file.created_by = user.id
+            storage_file.created_by = user
             storage_file.save()
 
         else:

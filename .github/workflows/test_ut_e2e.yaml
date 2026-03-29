@@ -1,0 +1,139 @@
+name: Unit tests
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    paths-ignore:
+      - '**.md'
+    tags-ignore:
+      - '**'
+  pull_request:
+    paths-ignore:
+      - '**.md'
+
+jobs:
+  unit-tests:
+    name: Build image and run Django tests
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+        options: >-
+          --health-cmd="pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+      rabbitmq:
+        image: rabbitmq:3.13-alpine
+        env:
+          RABBITMQ_DEFAULT_USER: guest
+          RABBITMQ_DEFAULT_PASS: guest
+        options: >-
+          --health-cmd="rabbitmq-diagnostics -q ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5672:5672
+
+    env:
+      POSTGRES_HOST: localhost
+      POSTGRES_PORT: '5432'
+      POSTGRES_USER: postgres
+      POSTGRES_PASS: postgres
+      POSTGRES_DB: userver_filemgr_ci
+      DJANGO_SECRET_KEY: ci-django-secret-not-for-production
+      VIRTUAL_HOST: localhost
+      ENV_MODE: dev
+      DOWNLOAD_EXP_BYTES_SECS_RATIO: '4.25'
+      LOCAL_TEST_STORAGE_ROOT: /tmp/filemgr-local
+      USERVER_AUTH_HOST: http://127.0.0.1:9
+      USERVER_AUTH_SYSTEM_NAME: ci-system
+      USERVER_AUTH_SYSTEM_TOKEN: ci-system-token
+      USERVER_AUTH_USER: ci-user
+      USERVER_AUTH_PASSWORD: ci-pass
+      USERVER_REDIS_HOST: localhost
+      USERVER_REDIS_PORT: '6379'
+      RABBITMQ_HOST: localhost
+      RABBITMQ_PORT: '5672'
+      RABBITMQ_USERNAME: guest
+      RABBITMQ_PASSWORD: guest
+      TEST_AWS_S3_ID: ci-fake-id
+      TEST_AWS_S3_KEY: ci-fake-key
+      TEST_AWS_S3_BUCKET: ci-fake-bucket
+      TEST_AWS_S3_REGION: us-east-1
+      TEST_AWS_S3_ROOT_FOLDER: ci-root
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v6
+
+      - name: Create application database
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -qq postgresql-client
+          for i in $(seq 1 30); do
+            PGPASSWORD=postgres psql -h localhost -U postgres -p 5432 -c 'SELECT 1' && break
+            sleep 1
+          done
+          PGPASSWORD=postgres psql -h localhost -U postgres -p 5432 -v ON_ERROR_STOP=1 -c "CREATE DATABASE userver_filemgr_ci;"
+
+      - name: Build Docker image
+        run: >
+          docker build
+          --file ./filemgr/Dockerfile
+          --tag userver-filemgr:local
+          --build-arg BUILD_DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
+          --build-arg BUILD_VERSION=${{ github.sha }}
+          --build-arg VCS_REF=${GITHUB_SHA}
+          ./filemgr
+
+      - name: Run migrations and unit tests
+        run: >
+          docker run --rm --network host
+          -e DJANGO_SECRET_KEY="$DJANGO_SECRET_KEY"
+          -e VIRTUAL_HOST="$VIRTUAL_HOST"
+          -e ENV_MODE="$ENV_MODE"
+          -e DOWNLOAD_EXP_BYTES_SECS_RATIO="$DOWNLOAD_EXP_BYTES_SECS_RATIO"
+          -e POSTGRES_HOST="$POSTGRES_HOST"
+          -e POSTGRES_PORT="$POSTGRES_PORT"
+          -e POSTGRES_USER="$POSTGRES_USER"
+          -e POSTGRES_PASS="$POSTGRES_PASS"
+          -e POSTGRES_DB="$POSTGRES_DB"
+          -e LOCAL_TEST_STORAGE_ROOT="$LOCAL_TEST_STORAGE_ROOT"
+          -e USERVER_AUTH_HOST="$USERVER_AUTH_HOST"
+          -e USERVER_AUTH_SYSTEM_NAME="$USERVER_AUTH_SYSTEM_NAME"
+          -e USERVER_AUTH_SYSTEM_TOKEN="$USERVER_AUTH_SYSTEM_TOKEN"
+          -e USERVER_AUTH_USER="$USERVER_AUTH_USER"
+          -e USERVER_AUTH_PASSWORD="$USERVER_AUTH_PASSWORD"
+          -e USERVER_REDIS_HOST="$USERVER_REDIS_HOST"
+          -e USERVER_REDIS_PORT="$USERVER_REDIS_PORT"
+          -e RABBITMQ_HOST="$RABBITMQ_HOST"
+          -e RABBITMQ_PORT="$RABBITMQ_PORT"
+          -e RABBITMQ_USERNAME="$RABBITMQ_USERNAME"
+          -e RABBITMQ_PASSWORD="$RABBITMQ_PASSWORD"
+          -e TEST_AWS_S3_ID="$TEST_AWS_S3_ID"
+          -e TEST_AWS_S3_KEY="$TEST_AWS_S3_KEY"
+          -e TEST_AWS_S3_BUCKET="$TEST_AWS_S3_BUCKET"
+          -e TEST_AWS_S3_REGION="$TEST_AWS_S3_REGION"
+          -e TEST_AWS_S3_ROOT_FOLDER="$TEST_AWS_S3_ROOT_FOLDER"
+          userver-filemgr:local
+          bash -lc "mkdir -p \"\$LOCAL_TEST_STORAGE_ROOT\" && python manage.py migrate --noinput && python manage.py test"

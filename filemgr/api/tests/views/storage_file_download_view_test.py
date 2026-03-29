@@ -1,9 +1,10 @@
 import uuid
 
-from app.models import StorageFileDownload
-from app.serializers import StorageFileDownloadSerializer
-from app.tests import dataset, generic
-from app.views import StorageFileDownloadViewSet
+from api.serializers.storage.storage_file_download_serializer import StorageFileDownloadSerializer
+from api.tests import dataset
+from api.tests import generic
+from api.views.storage.storage_file_download_view import StorageFileDownloadViewSet
+from core.models import StorageFileDownload
 
 
 class StorageFileDownloadViewSetCreateTest(generic.GenericCreateTestCases.CreateTest):
