@@ -6,7 +6,7 @@ charset-normalizer==3.4.6
 Django==6.0.3
 django-extensions==4.1.0
 django-q2==1.9.0
-setuptools==80.9.0
+setuptools==82.0.1
 django-redis==6.0.0
 redis==5.0.1
 djangorestframework==3.17.1
