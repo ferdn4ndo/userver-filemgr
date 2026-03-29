@@ -1,4 +1,4 @@
-FROM python:3.12-alpine
+FROM python:3.14-alpine
 LABEL maintaner="Fernando Constantino <const.fernando@gmail.com>"
 
 # Based on https://www.caktusgroup.com/blog/2017/03/14/production-ready-dockerfile-your-python-django-app/
