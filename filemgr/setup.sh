@@ -12,6 +12,12 @@ for arg in "$@"; do
       echo ""
       echo "RabbitMQ: set RABBITMQ_ADMIN_USER / RABBITMQ_ADMIN_PASS (management API) to create"
       echo "RABBITMQ_USERNAME when missing. Requires the management plugin on RABBITMQ_MANAGEMENT_PORT."
+      echo ""
+      echo "InconsistentMigrationHistory (e.g. admin before core): POSTGRES_DB was reused or migrated"
+      echo "  with another project. Use a dedicated DB for filemgr, or as Postgres superuser on that DB only:"
+      echo "    psql -h ... -U \"\$POSTGRES_ROOT_USER\" -d \"\$POSTGRES_DB\" -c 'DROP SCHEMA public CASCADE; CREATE SCHEMA public;'"
+      echo "    psql ... -d \"\$POSTGRES_DB\" -c 'GRANT USAGE, CREATE ON SCHEMA public TO \"\$POSTGRES_USER\";'"
+      echo "  Then redeploy. Never do this on a database shared with other applications."
       exit 0
       ;;
   esac
@@ -298,9 +304,23 @@ bootstrap_postgres_roles
 wait_for_db
 
 echo "Applying migrations..."
+migrate_out=""
 for i in $(seq 1 60); do
-  if python manage.py migrate --noinput; then
+  set +e
+  migrate_out="$(python manage.py migrate --noinput 2>&1)"
+  migration_status=$?
+  set -e
+  if [ "$migration_status" -eq 0 ]; then
+    printf '%s\n' "${migrate_out}"
     break
+  fi
+  printf '%s\n' "${migrate_out}"
+  if printf '%s' "${migrate_out}" | grep -qF 'InconsistentMigrationHistory'; then
+    echo ""
+    echo "migrate will not recover by retrying: django_migrations does not match this project (custom user model + admin)."
+    echo "  Typical cause: POSTGRES_DB points at a database that already had Django tables from another service."
+    echo "  Fix: use a dedicated database name for filemgr, or reset schema on that DB only (see: $0 --help)."
+    exit 1
   fi
   if [ "$i" -eq 60 ]; then
     echo "migrate failed after 60 attempts."
