@@ -167,6 +167,13 @@ ensure_userver_auth() {
     *)
       echo "userver-auth: POST /auth/register failed with HTTP ${reg_code}"
       cat "${tmp}"
+      echo ""
+      if [ "${reg_code}" = "401" ] && [ "${sys_code}" = "409" ]; then
+        echo "Hint: The system \"${USERVER_AUTH_SYSTEM_NAME}\" already exists in userver-auth, but USERVER_AUTH_SYSTEM_TOKEN in this environment does not match the token stored for that system." >&2
+        echo "      Align USERVER_AUTH_SYSTEM_NAME / USERVER_AUTH_SYSTEM_TOKEN (orchestration .env) with the existing DB row, or reset the auth database / remove the system, then re-run." >&2
+      elif [ "${reg_code}" = "401" ]; then
+        echo "Hint: Check USERVER_AUTH_SYSTEM_NAME, USERVER_AUTH_SYSTEM_TOKEN, USERVER_AUTH_USER, and USERVER_AUTH_PASSWORD against userver-auth." >&2
+      fi
       rm -f "${tmp}"
       exit 1
       ;;
