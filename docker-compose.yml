@@ -1,48 +1,21 @@
 services:
   userver-filemgr:
     container_name: userver-filemgr
+    restart: unless-stopped
     build:
-      context: filemgr
+      context: .
       dockerfile: Dockerfile
+    user: "${UID:-1000}:${GID:-1000}"
+    working_dir: /code
+    command: ["/bin/bash", "./entrypoint.sh"]
     volumes:
-      - ./filemgr:/code
-      - ./logs:/code/logs
-      - ./tmp:/tmp
+      - ./:/code
       - ./local:/storages/local
-    expose:
-      - 5000
     env_file:
-      - ./filemgr/.env
-    healthcheck:
-      test:
-        [
-          "CMD",
-          "python",
-          "-c",
-          "import socket; s=socket.socket(); s.settimeout(2); s.connect(('127.0.0.1',5000)); s.close()",
-        ]
-      interval: 5s
-      timeout: 3s
-      retries: 5
-      start_period: 180s
-
-  userver-filemgr-qcluster:
-    container_name: userver-filemgr-qcluster
-    build:
-      context: filemgr
-      dockerfile: Dockerfile
-    depends_on:
-      userver-filemgr:
-        condition: service_healthy
-    volumes:
-      - ./filemgr:/code
-      - ./logs:/code/logs
-      - ./tmp:/tmp
-      - ./local:/storages/local
-    # Migrations run in the web container setup; wait until it is listening to avoid racing Postgres grants.
-    command: ["python", "manage.py", "qcluster"]
-    env_file:
-      - ./filemgr/.env
+      - .env
+    environment:
+      MIGRATE_BIN: ${MIGRATE_BIN:-/app/main}
+      APP_BIN: ${APP_BIN:-/app/main}
 
 networks:
   default:

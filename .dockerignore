@@ -1,0 +1,10 @@
+.git
+.github
+out
+coverage.out
+tmp
+logs
+*.md
+docs
+integration
+**/*_test.go

@@ -1,7 +1,6 @@
-# Byte-compiled / optimized / DLL files
-__pycache__/
-*.py[cod]
-*$py.class
+# Build / coverage
+out/
+coverage.out
 
 # Temp files
 tmp/*
@@ -10,15 +9,10 @@ tmp/*
 # Log files
 logs/*
 !logs/.gitkeep
-!tmp/.gitkeep
 
-# Local Storage files
+# Local storage mount
 local/*
 !local/.gitkeep
-
-# Static files
-filemgr/static/*
-!filemgr/static/.gitkeep
 
 # Environments
 .env
