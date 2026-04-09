@@ -14,7 +14,7 @@ require (
 	github.com/jmoiron/sqlx v1.4.0
 	github.com/joho/godotenv v1.5.1
 	github.com/lib/pq v1.12.3
-	github.com/rs/cors v1.11.0
+	github.com/rs/cors v1.11.1
 	github.com/rs/cors/wrapper/gin v0.0.0-20260123235804-c9e5260a4ed4
 	github.com/rwcarlsen/goexif v0.0.0-20190401172101-9e8deecbddbd
 	github.com/spf13/cobra v1.10.2
