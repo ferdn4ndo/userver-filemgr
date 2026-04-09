@@ -10,14 +10,14 @@ import (
 
 // MediaJob is a row in media_processing_jobs.
 type MediaJob struct {
-	ID            uuid.UUID `db:"id"`
-	StorageID     uuid.UUID `db:"storage_id"`
-	StorageFileID uuid.UUID `db:"storage_file_id"`
-	Status        string    `db:"status"`
-	Attempts      int       `db:"attempts"`
+	ID            uuid.UUID      `db:"id"`
+	StorageID     uuid.UUID      `db:"storage_id"`
+	StorageFileID uuid.UUID      `db:"storage_file_id"`
+	Status        string         `db:"status"`
+	Attempts      int            `db:"attempts"`
 	LastError     sql.NullString `db:"last_error"`
-	CreatedAt     time.Time `db:"created_at"`
-	UpdatedAt     time.Time `db:"updated_at"`
+	CreatedAt     time.Time      `db:"created_at"`
+	UpdatedAt     time.Time      `db:"updated_at"`
 }
 
 // EnqueueMediaProcessing inserts a pending job or no-ops if one already exists for the file.

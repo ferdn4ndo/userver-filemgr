@@ -1,14 +1,12 @@
 package http_api
 
 import (
-	"bytes"
 	"context"
 	"crypto/rand"
 	"database/sql"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
-	"io"
 	"net/http"
 	"strconv"
 	"strings"
@@ -190,7 +188,7 @@ func (r *Router) getStorage(c *gin.Context) {
 }
 
 func (r *Router) updateStorage(c *gin.Context) { r.writeStorage(c, true) }
-func (r *Router) patchStorage(c *gin.Context) { r.writeStorage(c, false) }
+func (r *Router) patchStorage(c *gin.Context)  { r.writeStorage(c, false) }
 
 func (r *Router) writeStorage(c *gin.Context, requireCreds bool) {
 	u := ctxUser(c)
@@ -562,38 +560,15 @@ func (r *Router) createDownload(c *gin.Context) {
 // streamDownload serves local files for a valid download row (S3 uses presigned URLs).
 func (r *Router) streamDownload(c *gin.Context) {
 	u := ctxUser(c)
-	did, err := uuid.Parse(c.Param("downloadID"))
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"detail": "invalid download id"})
+	did, sid, fid, ok := r.streamDownloadParseIDs(c)
+	if !ok {
 		return
 	}
-	dl, err := r.db.GetValidDownload(c.Request.Context(), did, u.ID)
-	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"detail": "not found"})
+	dl, f, st, ok := r.streamDownloadLoadContext(c, u, did, sid, fid)
+	if !ok {
 		return
 	}
-	sid, err := uuid.Parse(c.Param("storageID"))
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"detail": "invalid storage"})
-		return
-	}
-	fid, err := uuid.Parse(c.Param("fileID"))
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"detail": "invalid file"})
-		return
-	}
-	f, err := r.db.GetFile(c.Request.Context(), sid, fid, false, u.IsAdmin, u.ID)
-	if err != nil || f.ID != dl.StorageFileID {
-		c.JSON(http.StatusNotFound, gin.H{"detail": "not found"})
-		return
-	}
-	st, err := r.db.GetStorage(c.Request.Context(), sid)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"detail": err.Error()})
-		return
-	}
-	if dl.DownloadURL.Valid && (strings.HasPrefix(dl.DownloadURL.String, "http://") || strings.HasPrefix(dl.DownloadURL.String, "https://")) {
-		c.Redirect(http.StatusFound, dl.DownloadURL.String)
+	if redirectIfExternalDownloadURL(c, dl) {
 		return
 	}
 	if !f.RealPath.Valid {
@@ -610,11 +585,7 @@ func (r *Router) streamDownload(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"detail": err.Error()})
 		return
 	}
-	fn := "file"
-	if f.Name.Valid && f.Name.String != "" {
-		fn = f.Name.String
-	}
-	c.FileAttachment(p, fn)
+	c.FileAttachment(p, streamDownloadAttachmentName(f))
 }
 
 func (r *Router) listStorageUsers(c *gin.Context) {
@@ -786,13 +757,13 @@ func (r *Router) uploadMultipart(c *gin.Context) {
 	frow := &data.StorageFile{
 		ID: id, SignatureKey: sig, StorageID: sid,
 		OwnerID: uuid.NullUUID{UUID: u.ID, Valid: true},
-		Name: sql.NullString{String: fh.Filename, Valid: true},
-		Status: "UPLOADING", Visibility: "SYSTEM", Size: 0,
+		Name:    sql.NullString{String: fh.Filename, Valid: true},
+		Status:  "UPLOADING", Visibility: "SYSTEM", Size: 0,
 		Extension: sql.NullString{String: ext, Valid: ext != ""},
-		Origin: "LOCAL", VirtualPath: sql.NullString{String: vpath, Valid: true},
-		RealPath: sql.NullString{String: real, Valid: true},
+		Origin:    "LOCAL", VirtualPath: sql.NullString{String: vpath, Valid: true},
+		RealPath:    sql.NullString{String: real, Valid: true},
 		CreatedByID: uuid.NullUUID{UUID: u.ID, Valid: true},
-		TypeID: mimeID,
+		TypeID:      mimeID,
 	}
 	if err := r.db.InsertFile(c.Request.Context(), frow); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"detail": err.Error()})
@@ -840,68 +811,16 @@ func (r *Router) uploadFromURL(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"detail": "storage not found"})
 		return
 	}
-	req, err := http.NewRequestWithContext(c.Request.Context(), http.MethodGet, body.URL, nil)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"detail": err.Error()})
+	buf, ct, ok := r.fetchURLUploadBody(c, body.URL)
+	if !ok {
 		return
 	}
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil || resp.StatusCode != http.StatusOK {
-		if resp != nil {
-			resp.Body.Close()
-		}
-		c.JSON(http.StatusBadGateway, gin.H{"detail": "failed to fetch url"})
+	ext := extensionFromSourceURL(body.URL)
+	frow, ok := r.newUploadingFileFromURL(c, u, sid, body.URL, ext)
+	if !ok {
 		return
 	}
-	defer resp.Body.Close()
-	lim := io.LimitReader(resp.Body, 512<<20)
-	buf, err := io.ReadAll(lim)
-	if err != nil {
-		c.JSON(http.StatusBadGateway, gin.H{"detail": err.Error()})
-		return
-	}
-	id := uuid.New()
-	sig := randomSig()
-	ext := "bin"
-	vpath := "/" + id.String() + "/file"
-	real := strings.TrimPrefix(vpath, "/")
-	frow := &data.StorageFile{
-		ID: id, SignatureKey: sig, StorageID: sid,
-		OwnerID: uuid.NullUUID{UUID: u.ID, Valid: true},
-		Status: "UPLOADING", Visibility: "SYSTEM", Size: 0,
-		Origin: "WEB", OriginalPath: sql.NullString{String: body.URL, Valid: true},
-		VirtualPath: sql.NullString{String: vpath, Valid: true},
-		RealPath:    sql.NullString{String: real, Valid: true},
-		CreatedByID: uuid.NullUUID{UUID: u.ID, Valid: true},
-	}
-	ct := resp.Header.Get("Content-Type")
-	if i := strings.LastIndex(body.URL, "."); i >= 0 {
-		ext = strings.ToLower(strings.TrimSpace(body.URL[i+1:]))
-		if len(ext) > 16 {
-			ext = ext[:16]
-		}
-	}
-	if mt, err := r.db.FindMimeByExtension(c.Request.Context(), ext); err == nil {
-		frow.TypeID = uuid.NullUUID{UUID: mt.ID, Valid: true}
-	}
-	frow.Extension = sql.NullString{String: ext, Valid: true}
-	if err := r.db.InsertFile(c.Request.Context(), frow); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"detail": err.Error()})
-		return
-	}
-	be, err := r.objects.ForStorage(st.Type.String, st.Credentials)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"detail": err.Error()})
-		return
-	}
-	if err := be.Put(c.Request.Context(), real, bytes.NewReader(buf), int64(len(buf)), ct); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"detail": err.Error()})
-		return
-	}
-	_ = r.db.UpdateFilePathsAndStatus(c.Request.Context(), id, "PUBLISHED", int64(len(buf)), real, vpath, "", frow.TypeID)
-	out, _ := r.db.GetFile(c.Request.Context(), sid, id, false, true, u.ID)
-	r.maybeEnqueueMedia(c.Request.Context(), sid, out)
-	c.JSON(http.StatusCreated, out)
+	r.putBufferedAndPublishURLUpload(c, st, frow, buf, ct, sid, u)
 }
 
 func (r *Router) parseSF(c *gin.Context) (uuid.UUID, uuid.UUID, bool) {

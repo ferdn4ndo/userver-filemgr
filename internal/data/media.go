@@ -135,7 +135,6 @@ func (d *DB) ListStorageMedia(ctx context.Context, storageID uuid.UUID, admin bo
 				(f.visibility = 'USER' AND f.owner_id = $%d)
 			)`, argPos, argPos)
 			args = append(args, userID)
-			argPos++
 		}
 	}
 
@@ -195,56 +194,13 @@ func (d *DB) GetStorageMedia(ctx context.Context, storageID, mediaID uuid.UUID, 
 
 	switch strings.ToUpper(m.Type) {
 	case "IMAGE":
-		var img MediaImage
-		if err := d.db.GetContext(ctx, &img, `
-			SELECT id, created_at, updated_at, focal_length, aperture, flash_fired, iso, orientation_angle, is_flipped,
-				exposition, datetime_taken, camera_manufacturer, camera_model, exif_image_height, exif_image_width,
-				size_tag, height, width, megapixels, media_id
-			FROM core_storagemediaimage WHERE media_id = $1`, m.ID); err == nil {
-			m.Image = &img
-			var sized []MediaImageSized
-			if err := d.db.SelectContext(ctx, &sized, `
-				SELECT id, created_at, updated_at, size_tag, height, width, megapixels, media_image_id, storage_file_id
-				FROM core_storagemediaimagesized WHERE media_image_id = $1 ORDER BY width DESC NULLS LAST, height DESC NULLS LAST`, img.ID); err == nil {
-				for i := range sized {
-					tf, err := d.loadFileRow(ctx, storageID, sized[i].StorageFileID, false)
-					if err == nil {
-						ef2, _ := d.enrichFile(ctx, *tf)
-						sized[i].File = ef2
-					}
-				}
-				m.Image.SizedImages = sized
-			}
-		}
+		d.attachImageMediaDetail(ctx, storageID, &m)
 	case "VIDEO":
-		var v MediaVideo
-		if err := d.db.GetContext(ctx, &v, `
-			SELECT id, created_at, updated_at, fps, duration::text, size_tag, height, width, megapixels, media_id
-			FROM core_storagemediavideo WHERE media_id = $1`, m.ID); err == nil {
-			m.Video = &v
-		}
+		d.attachVideoMediaDetail(ctx, &m)
 	case "DOCUMENT":
-		var doc MediaDocument
-		if err := d.db.GetContext(ctx, &doc, `
-			SELECT id, created_at, updated_at, pages, black_and_white, media_id
-			FROM core_storagemediadocument WHERE media_id = $1`, m.ID); err == nil {
-			m.Document = &doc
-		}
+		d.attachDocumentMediaDetail(ctx, &m)
 	}
-
-	var thumbs []MediaThumbRow
-	if err := d.db.SelectContext(ctx, &thumbs, `
-		SELECT id, created_at, updated_at, size_tag, height, width, megapixels, media_id, storage_file_id
-		FROM core_storagemediathumbnail WHERE media_id = $1 ORDER BY size_tag`, m.ID); err == nil {
-		for i := range thumbs {
-			tf, err := d.loadFileRow(ctx, storageID, thumbs[i].StorageFileID, false)
-			if err == nil {
-				ef2, _ := d.enrichFile(ctx, *tf)
-				thumbs[i].File = ef2
-			}
-		}
-		m.Thumbnails = thumbs
-	}
+	d.attachThumbnailsForMedia(ctx, storageID, &m)
 
 	return &m, nil
 }

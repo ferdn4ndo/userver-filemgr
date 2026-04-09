@@ -113,6 +113,19 @@ func (p *Processor) Process(ctx context.Context, job *data.MediaJob) error {
 	}
 }
 
+// decodeImageEXIF returns JSON metadata and the decoded EXIF struct (nil if absent or invalid).
+func decodeImageEXIF(buf []byte) (json.RawMessage, *exif.Exif) {
+	x, xerr := exif.Decode(bytes.NewReader(buf))
+	if xerr != nil {
+		return json.RawMessage(`{}`), nil
+	}
+	exifJSON, _ := exifToJSON(x)
+	if len(exifJSON) == 0 {
+		exifJSON = json.RawMessage(`{}`)
+	}
+	return exifJSON, x
+}
+
 func (p *Processor) processImage(ctx context.Context, stType string, creds []byte, mediaCfg json.RawMessage, f *data.StorageFile) error {
 	be, err := p.objects.ForStorage(stType, creds)
 	if err != nil {
@@ -130,16 +143,7 @@ func (p *Processor) processImage(ctx context.Context, stType string, creds []byt
 	if int64(len(buf)) >= p.env.MediaMaxImageBytes {
 		return fmt.Errorf("image exceeds MEDIA_MAX_IMAGE_BYTES")
 	}
-	var exifJSON json.RawMessage
-	x, xerr := exif.Decode(bytes.NewReader(buf))
-	if xerr == nil {
-		exifJSON, _ = exifToJSON(x)
-	} else {
-		x = nil
-	}
-	if len(exifJSON) == 0 {
-		exifJSON = json.RawMessage(`{}`)
-	}
+	exifJSON, x := decodeImageEXIF(buf)
 	img, err := imaging.Decode(bytes.NewReader(buf), imaging.AutoOrientation(true))
 	if err != nil {
 		return fmt.Errorf("decode image: %w", err)
@@ -183,108 +187,11 @@ func (p *Processor) processImage(ctx context.Context, stType string, creds []byt
 	if err != nil {
 		return fmt.Errorf("media_convert_configuration.image_resizer: %w", err)
 	}
-	for _, box := range sizes {
-		rw, rh := computeNewImageDimensions(w, h, box.W, box.H)
-		if w < rw || h < rh {
-			continue
-		}
-		resized := imaging.Resize(img, rw, rh, imaging.Lanczos)
-		var bout bytes.Buffer
-		if err := imaging.Encode(&bout, resized, imaging.JPEG, imaging.JPEGQuality(jpegQualityResized)); err != nil {
-			return err
-		}
-		tid := uuid.New()
-		sizeTag := sizeTagFromDimensions(rw, rh)
-		vpath := "/" + tid.String() + "/resized_" + strings.ToLower(sizeTag) + ".jpg"
-		real := strings.TrimPrefix(vpath, "/")
-		sfile := &data.StorageFile{
-			ID:             tid,
-			SignatureKey:   randomSig(),
-			StorageID:      f.StorageID,
-			OwnerID:        f.OwnerID,
-			Name:           sql.NullString{String: sizeTag + "_resized.jpg", Valid: true},
-			Status:         "PUBLISHED",
-			Visibility:     f.Visibility,
-			Size:           int64(bout.Len()),
-			Extension:      sql.NullString{String: "jpg", Valid: true},
-			Origin:         "DERIVED",
-			VirtualPath:    sql.NullString{String: vpath, Valid: true},
-			RealPath:       sql.NullString{String: real, Valid: true},
-			Available:      true,
-			Excluded:       false,
-			CreatedByID:    f.CreatedByID,
-			TypeID:         jpegType,
-			ExifMetadata:   f.ExifMetadata,
-			CustomMetadata: f.CustomMetadata,
-		}
-		if err := p.db.InsertFileTx(ctx, tx, sfile); err != nil {
-			return err
-		}
-		if err := be.Put(ctx, real, bytes.NewReader(bout.Bytes()), int64(bout.Len()), "image/jpeg"); err != nil {
-			return err
-		}
-		szRow := &data.MediaImageSized{
-			ID:            uuid.New(),
-			SizeTag:       sql.NullString{String: sizeTag, Valid: true},
-			Height:        sql.NullInt64{Int64: int64(rh), Valid: true},
-			Width:         sql.NullInt64{Int64: int64(rw), Valid: true},
-			Megapixels:    sql.NullString{String: fmt.Sprintf("%.4f", float64(rw*rh)/1e6), Valid: true},
-			MediaImageID:  imageRowID,
-			StorageFileID: tid,
-		}
-		if err := data.InsertStorageMediaImageSizedTx(ctx, tx, szRow, f.CreatedByID); err != nil {
-			return err
-		}
+	if err := p.insertSizedImageRows(ctx, tx, be, img, f, sizes, imageRowID, jpegType, w, h); err != nil {
+		return err
 	}
-
-	for _, spec := range thumbSpecs {
-		thumb := imaging.Fit(img, spec.W, spec.H, imaging.Lanczos)
-		var out bytes.Buffer
-		if err := imaging.Encode(&out, thumb, imaging.JPEG, imaging.JPEGQuality(85)); err != nil {
-			return err
-		}
-		tid := uuid.New()
-		vpath := "/" + tid.String() + "/" + spec.Tag + ".jpg"
-		real := strings.TrimPrefix(vpath, "/")
-		tfile := &data.StorageFile{
-			ID:           tid,
-			SignatureKey: randomSig(),
-			StorageID:    f.StorageID,
-			OwnerID:      f.OwnerID,
-			Name:         sql.NullString{String: spec.Tag + ".jpg", Valid: true},
-			Status:       "PUBLISHED",
-			Visibility:   f.Visibility,
-			Size:         int64(out.Len()),
-			Extension:    sql.NullString{String: "jpg", Valid: true},
-			Origin:       "DERIVED",
-			VirtualPath:  sql.NullString{String: vpath, Valid: true},
-			RealPath:     sql.NullString{String: real, Valid: true},
-			Available:    true,
-			Excluded:     false,
-			CreatedByID:  f.CreatedByID,
-			TypeID:       jpegType,
-		}
-		if err := p.db.InsertFileTx(ctx, tx, tfile); err != nil {
-			return err
-		}
-		if err := be.Put(ctx, real, bytes.NewReader(out.Bytes()), int64(out.Len()), "image/jpeg"); err != nil {
-			return err
-		}
-		tb := thumb.Bounds()
-		tw, th2 := tb.Dx(), tb.Dy()
-		tmp := float64(tw*th2) / 1e6
-		thRow := &data.MediaThumbRow{
-			ID:            uuid.New(),
-			SizeTag:       spec.Tag,
-			Height:        sql.NullInt64{Int64: int64(th2), Valid: true},
-			Width:         sql.NullInt64{Int64: int64(tw), Valid: true},
-			Megapixels:    sql.NullString{String: fmt.Sprintf("%.4f", tmp), Valid: true},
-			MediaID:       mediaID,
-			StorageFileID: tid,
-		}
-		if err := data.InsertStorageMediaThumbnailTx(ctx, tx, thRow, f.CreatedByID); err != nil {
-			return err
-		}
+	if err := p.insertThumbnailRows(ctx, tx, be, img, f, mediaID, jpegType); err != nil {
+		return err
 	}
 
 	if err := tx.Commit(); err != nil {

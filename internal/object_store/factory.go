@@ -46,11 +46,11 @@ func (f *Factory) ForStorage(storageType string, credsJSON []byte) (Backend, err
 		return &localBackend{root: root}, nil
 	case "AMAZON_S3":
 		var c struct {
-			AWSID         string `json:"AWS_S3_ID"`
-			AWSKey        string `json:"AWS_S3_KEY"`
-			Bucket        string `json:"AWS_S3_BUCKET"`
-			Region        string `json:"AWS_S3_REGION"`
-			RootFolder    string `json:"AWS_S3_ROOT_FOLDER"`
+			AWSID      string `json:"AWS_S3_ID"`
+			AWSKey     string `json:"AWS_S3_KEY"`
+			Bucket     string `json:"AWS_S3_BUCKET"`
+			Region     string `json:"AWS_S3_REGION"`
+			RootFolder string `json:"AWS_S3_ROOT_FOLDER"`
 		}
 		if err := json.Unmarshal(credsJSON, &c); err != nil {
 			return nil, err

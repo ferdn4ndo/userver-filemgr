@@ -9,15 +9,15 @@ import (
 
 // UserPublic is exposed in file owner JSON (legacy serializer shape).
 type UserPublic struct {
-	ID               uuid.UUID `json:"id"`
-	Username         string    `json:"username"`
-	SystemName       string    `json:"system_name"`
-	IsAdmin          bool      `json:"is_admin"`
-	IsActive         bool      `json:"is_active"`
-	RegisteredAt     time.Time `json:"registered_at"`
-	LastActivityAt   time.Time `json:"last_activity_at"`
-	TotalDownloads   int       `json:"total_downloads"`
-	TotalUploads     int       `json:"total_uploads"`
+	ID             uuid.UUID `json:"id"`
+	Username       string    `json:"username"`
+	SystemName     string    `json:"system_name"`
+	IsAdmin        bool      `json:"is_admin"`
+	IsActive       bool      `json:"is_active"`
+	RegisteredAt   time.Time `json:"registered_at"`
+	LastActivityAt time.Time `json:"last_activity_at"`
+	TotalDownloads int       `json:"total_downloads"`
+	TotalUploads   int       `json:"total_uploads"`
 }
 
 func (d *DB) UserPublic(ctx context.Context, id uuid.UUID) (*UserPublic, error) {
