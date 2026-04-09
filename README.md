@@ -1,10 +1,13 @@
 # uServer FileMgr
 
-[![Unit and integration tests](https://github.com/ferdn4ndo/userver-filemgr/actions/workflows/test_ut_e2e.yaml/badge.svg?branch=main)](https://github.com/ferdn4ndo/userver-filemgr/actions/workflows/test_ut_e2e.yaml)
-[![GitLeaks](https://github.com/ferdn4ndo/userver-filemgr/actions/workflows/test_code_leaks.yaml/badge.svg?branch=main)](https://github.com/ferdn4ndo/userver-filemgr/actions/workflows/test_code_leaks.yaml)
-[![ShellCheck](https://github.com/ferdn4ndo/userver-filemgr/actions/workflows/test_code_quality.yaml/badge.svg?branch=main)](https://github.com/ferdn4ndo/userver-filemgr/actions/workflows/test_code_quality.yaml)
+[![Go version](https://img.shields.io/github/go-mod/go-version/ferdn4ndo/userver-filemgr)](https://github.com/ferdn4ndo/userver-filemgr/blob/main/go.mod)
 [![Release](https://img.shields.io/github/v/release/ferdn4ndo/userver-filemgr)](https://github.com/ferdn4ndo/userver-filemgr/releases)
-[![MIT license](https://img.shields.io/badge/license-MIT-brightgreen.svg)](https://opensource.org/licenses/MIT)
+[![Go Report Card](https://goreportcard.com/badge/github.com/ferdn4ndo/userver-filemgr)](https://goreportcard.com/report/github.com/ferdn4ndo/userver-filemgr)
+[![Unit and integration tests](https://github.com/ferdn4ndo/userver-filemgr/actions/workflows/test_ut_e2e.yaml/badge.svg?branch=main)](https://github.com/ferdn4ndo/userver-filemgr/actions/workflows/test_ut_e2e.yaml)
+[![Grype scan](https://github.com/ferdn4ndo/userver-filemgr/actions/workflows/test_grype_scan.yaml/badge.svg?branch=main)](https://github.com/ferdn4ndo/userver-filemgr/actions/workflows/test_grype_scan.yaml)
+[![Gitleaks](https://github.com/ferdn4ndo/userver-filemgr/actions/workflows/test_code_leaks.yaml/badge.svg?branch=main)](https://github.com/ferdn4ndo/userver-filemgr/actions/workflows/test_code_leaks.yaml)
+[![Code quality](https://github.com/ferdn4ndo/userver-filemgr/actions/workflows/test_code_quality.yaml/badge.svg?branch=main)](https://github.com/ferdn4ndo/userver-filemgr/actions/workflows/test_code_quality.yaml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-brightgreen.svg)](https://github.com/ferdn4ndo/userver-filemgr/blob/main/LICENSE)
 
 File management microservice written in **Go** (Gin) with **PostgreSQL** metadata and **Amazon S3** or **local disk** object storage. It is part of the [uServer](https://github.com/users/ferdn4ndo/projects/1) stack.
 
