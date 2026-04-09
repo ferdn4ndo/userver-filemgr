@@ -55,8 +55,8 @@ Typical deployment:
 The HTTP server runs **in-process media workers** (goroutines) that consume a **PostgreSQL-backed queue** (`media_processing_jobs`). Claiming uses `FOR UPDATE SKIP LOCKED`, so multiple replicas can run workers safely without double-processing the same job.
 
 - **Images**: decode with auto-orientation, optional EXIF (stored on the parent `core_storagefile` and in `core_storagemediaimage`), JPEG thumbnails at small/medium/large sizes as separate `core_storagefile` rows linked via `core_storagemediathumbnail`.
+- **Configurable resizes (legacy PR #1 / Django parity)**: if `core_storage.media_convert_configuration` contains `{"image_resizer":{"sizes":["1920x1080",...]}}` (or `sizes` as `[{"width":1280,"height":720}]`), the worker generates extra full-frame JPEGs with the same aspect logic as the old Python service, skips upscaling when the original is smaller, assigns `SIZE_*` tags from output dimensions, and stores rows in **`core_storagemediaimagesized`** (exposed as `image.sized_images` on `GET .../media/:id`).
 - **Video**: optional `ffprobe` when `FFPROBE_PATH` is set and the object is within `MEDIA_MAX_VIDEO_PROBE_BYTES`; dimensions and duration are written to `core_storagemediavideo`.
 - **Documents (PDF)**: a minimal `core_storagemediadocument` row is created; page counts and rasterization are not implemented.
-- **`core_storagemediaimagesized`**: legacy Django table for alternate image dimensions; the Go service does not populate it (thumbnails use `core_storagemediathumbnail` instead). Existing rows remain readable if you query the DB directly.
 
 Tune with `MEDIA_PROCESSING_ENABLED`, `MEDIA_WORKER_COUNT`, `MEDIA_WORKER_POLL_MS`, `MEDIA_MAX_IMAGE_BYTES`, `MEDIA_MAX_VIDEO_PROBE_BYTES`, and `FFPROBE_PATH` (see `.env.template`).
