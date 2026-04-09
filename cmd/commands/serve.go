@@ -14,7 +14,7 @@ import (
 
 type ServeCommand struct{}
 
-func (s *ServeCommand) Short() string { return "serve application" }
+func (s *ServeCommand) Short() string            { return "serve application" }
 func (s *ServeCommand) Setup(cmd *cobra.Command) {}
 
 func (s *ServeCommand) Run() lib.CommandRunner {

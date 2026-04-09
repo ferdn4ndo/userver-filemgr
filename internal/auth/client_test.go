@@ -15,11 +15,11 @@ func TestClientValidateBearer(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		assert.Equal(t, "Bearer tok", r.Header.Get("Authorization"))
 		_ = json.NewEncoder(w).Encode(map[string]any{
-			"uuid":         "550e8400-e29b-41d4-a716-446655440000",
-			"username":     "a@b.c",
-			"system_name":  "sys",
-			"is_admin":     true,
-			"token":        map[string]any{"issued_at": "2020-01-01T00:00:00Z", "expires_at": "2030-01-01T00:00:00Z"},
+			"uuid":        "550e8400-e29b-41d4-a716-446655440000",
+			"username":    "a@b.c",
+			"system_name": "sys",
+			"is_admin":    true,
+			"token":       map[string]any{"issued_at": "2020-01-01T00:00:00Z", "expires_at": "2030-01-01T00:00:00Z"},
 		})
 	}))
 	t.Cleanup(srv.Close)

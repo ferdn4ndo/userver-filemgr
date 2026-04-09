@@ -21,33 +21,33 @@ type MimeType struct {
 }
 
 type StorageFile struct {
-	ID              uuid.UUID       `db:"id" json:"id"`
-	CreatedAt       time.Time       `db:"created_at" json:"created_at"`
-	UpdatedAt       *time.Time      `db:"updated_at" json:"updated_at,omitempty"`
-	SignatureKey    string          `db:"signature_key" json:"signature_key"`
-	StorageID       uuid.UUID       `db:"storage_id" json:"-"`
-	OwnerID         uuid.NullUUID   `db:"owner_id" json:"-"`
-	Name            sql.NullString  `db:"name" json:"name"`
-	Status          string          `db:"status" json:"status"`
-	Visibility      string          `db:"visibility" json:"visibility"`
-	Size            int64           `db:"size" json:"size"`
-	Hash            sql.NullString  `db:"hash" json:"hash"`
-	TypeID          uuid.NullUUID   `db:"type_id" json:"-"`
-	Extension       sql.NullString  `db:"extension" json:"extension"`
-	ExifMetadata    json.RawMessage `db:"exif_metadata" json:"exif_metadata"`
-	CustomMetadata  json.RawMessage `db:"custom_metadata" json:"custom_metadata"`
-	Origin          string          `db:"origin" json:"origin"`
-	OriginalPath    sql.NullString  `db:"original_path" json:"original_path"`
-	RealPath        sql.NullString  `db:"real_path" json:"real_path"`
-	VirtualPath     sql.NullString  `db:"virtual_path" json:"virtual_path"`
-	Available       bool            `db:"available" json:"available"`
-	Excluded        bool            `db:"excluded" json:"excluded"`
-	CreatedByID     uuid.NullUUID   `db:"created_by_id" json:"-"`
-	UpdatedByID     uuid.NullUUID   `db:"updated_by_id" json:"-"`
-	Owner           *UserPublic     `json:"owner,omitempty"`
-	Type            *MimeType       `json:"type,omitempty"`
-	CreatedBy       *uuid.UUID      `json:"created_by,omitempty"`
-	UpdatedBy       *uuid.UUID      `json:"updated_by,omitempty"`
+	ID             uuid.UUID       `db:"id" json:"id"`
+	CreatedAt      time.Time       `db:"created_at" json:"created_at"`
+	UpdatedAt      *time.Time      `db:"updated_at" json:"updated_at,omitempty"`
+	SignatureKey   string          `db:"signature_key" json:"signature_key"`
+	StorageID      uuid.UUID       `db:"storage_id" json:"-"`
+	OwnerID        uuid.NullUUID   `db:"owner_id" json:"-"`
+	Name           sql.NullString  `db:"name" json:"name"`
+	Status         string          `db:"status" json:"status"`
+	Visibility     string          `db:"visibility" json:"visibility"`
+	Size           int64           `db:"size" json:"size"`
+	Hash           sql.NullString  `db:"hash" json:"hash"`
+	TypeID         uuid.NullUUID   `db:"type_id" json:"-"`
+	Extension      sql.NullString  `db:"extension" json:"extension"`
+	ExifMetadata   json.RawMessage `db:"exif_metadata" json:"exif_metadata"`
+	CustomMetadata json.RawMessage `db:"custom_metadata" json:"custom_metadata"`
+	Origin         string          `db:"origin" json:"origin"`
+	OriginalPath   sql.NullString  `db:"original_path" json:"original_path"`
+	RealPath       sql.NullString  `db:"real_path" json:"real_path"`
+	VirtualPath    sql.NullString  `db:"virtual_path" json:"virtual_path"`
+	Available      bool            `db:"available" json:"available"`
+	Excluded       bool            `db:"excluded" json:"excluded"`
+	CreatedByID    uuid.NullUUID   `db:"created_by_id" json:"-"`
+	UpdatedByID    uuid.NullUUID   `db:"updated_by_id" json:"-"`
+	Owner          *UserPublic     `json:"owner,omitempty"`
+	Type           *MimeType       `json:"type,omitempty"`
+	CreatedBy      *uuid.UUID      `json:"created_by,omitempty"`
+	UpdatedBy      *uuid.UUID      `json:"updated_by,omitempty"`
 }
 
 func (d *DB) FindMimeByExtension(ctx context.Context, ext string) (*MimeType, error) {
@@ -92,7 +92,6 @@ func (d *DB) ListFiles(ctx context.Context, storageID uuid.UUID, excluded bool, 
 				(f.visibility = 'USER' AND f.owner_id = $%d)
 			)`, argPos, argPos)
 			args = append(args, userID)
-			argPos++
 		}
 	} else {
 		visClause = ""
@@ -288,13 +287,13 @@ func jsonOrEmpty(j json.RawMessage) any {
 }
 
 type FileDownload struct {
-	ID            uuid.UUID    `db:"id" json:"id"`
+	ID            uuid.UUID      `db:"id" json:"id"`
 	DownloadURL   sql.NullString `db:"download_url" json:"download_url"`
-	ForceDownload bool         `db:"force_download" json:"force_download"`
-	CreatedAt     time.Time    `db:"created_at" json:"created_at"`
-	ExpiresAt     time.Time    `db:"expires_at" json:"expires_at"`
-	OwnerID       uuid.NullUUID `db:"owner_id" json:"-"`
-	StorageFileID uuid.UUID    `db:"storage_file_id" json:"storage_file"`
+	ForceDownload bool           `db:"force_download" json:"force_download"`
+	CreatedAt     time.Time      `db:"created_at" json:"created_at"`
+	ExpiresAt     time.Time      `db:"expires_at" json:"expires_at"`
+	OwnerID       uuid.NullUUID  `db:"owner_id" json:"-"`
+	StorageFileID uuid.UUID      `db:"storage_file_id" json:"storage_file"`
 }
 
 func (d *DB) InsertDownload(ctx context.Context, row *FileDownload) error {

@@ -14,7 +14,7 @@ import (
 
 type MigrateUpCommand struct{}
 
-func (s *MigrateUpCommand) Short() string { return "migrate up the database" }
+func (s *MigrateUpCommand) Short() string            { return "migrate up the database" }
 func (s *MigrateUpCommand) Setup(cmd *cobra.Command) {}
 
 func (s *MigrateUpCommand) Run() lib.CommandRunner {
@@ -33,7 +33,7 @@ func NewMigrateUpCommand() *MigrateUpCommand { return &MigrateUpCommand{} }
 
 type MigrateDownCommand struct{}
 
-func (s *MigrateDownCommand) Short() string { return "migrate down the database" }
+func (s *MigrateDownCommand) Short() string            { return "migrate down the database" }
 func (s *MigrateDownCommand) Setup(cmd *cobra.Command) {}
 
 func (s *MigrateDownCommand) Run() lib.CommandRunner {

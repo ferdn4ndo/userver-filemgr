@@ -140,6 +140,47 @@ func resolveEnvFilePath() string {
 	return ".env"
 }
 
+func mergeEnvLinesIntoBuilder(lines []string, filtered map[string]string) (*strings.Builder, map[string]bool) {
+	out := &strings.Builder{}
+	written := make(map[string]bool)
+	for _, line := range lines {
+		m := envLineKey.FindStringSubmatch(line)
+		if m != nil {
+			k := m[1]
+			if _, ok := filtered[k]; ok {
+				if !written[k] {
+					fmt.Fprintf(out, "%s=%s\n", k, formatEnvValue(filtered[k]))
+					written[k] = true
+				}
+				continue
+			}
+		}
+		out.WriteString(line)
+		out.WriteByte('\n')
+	}
+	return out, written
+}
+
+func appendMissingEnvKeys(out *strings.Builder, filtered map[string]string, written map[string]bool) {
+	order := []string{
+		"FILEMGR_SYSTEM_TOKEN",
+		"FILEMGR_BOOTSTRAP_ADMIN_USERNAME",
+		"FILEMGR_BOOTSTRAP_ADMIN_PASSWORD",
+		"FILEMGR_BOOTSTRAP_ADMIN_IS_ADMIN",
+	}
+	for _, k := range order {
+		if v, ok := filtered[k]; ok && !written[k] {
+			fmt.Fprintf(out, "%s=%s\n", k, formatEnvValue(v))
+			written[k] = true
+		}
+	}
+	for k, v := range filtered {
+		if !written[k] {
+			fmt.Fprintf(out, "%s=%s\n", k, formatEnvValue(v))
+		}
+	}
+}
+
 // upsertEnvFile replaces or appends KEY=value lines. Duplicate keys in the file collapse to one updated line.
 func upsertEnvFile(path string, updates map[string]string) error {
 	filtered := make(map[string]string)
@@ -164,41 +205,8 @@ func upsertEnvFile(path string, updates map[string]string) error {
 		lines = strings.Split(content, "\n")
 	}
 
-	written := make(map[string]bool)
-	var out strings.Builder
-	for _, line := range lines {
-		m := envLineKey.FindStringSubmatch(line)
-		if m != nil {
-			k := m[1]
-			if _, ok := filtered[k]; ok {
-				if !written[k] {
-					fmt.Fprintf(&out, "%s=%s\n", k, formatEnvValue(filtered[k]))
-					written[k] = true
-				}
-				continue
-			}
-		}
-		out.WriteString(line)
-		out.WriteByte('\n')
-	}
-
-	order := []string{
-		"FILEMGR_SYSTEM_TOKEN",
-		"FILEMGR_BOOTSTRAP_ADMIN_USERNAME",
-		"FILEMGR_BOOTSTRAP_ADMIN_PASSWORD",
-		"FILEMGR_BOOTSTRAP_ADMIN_IS_ADMIN",
-	}
-	for _, k := range order {
-		if v, ok := filtered[k]; ok && !written[k] {
-			fmt.Fprintf(&out, "%s=%s\n", k, formatEnvValue(v))
-			written[k] = true
-		}
-	}
-	for k, v := range filtered {
-		if !written[k] {
-			fmt.Fprintf(&out, "%s=%s\n", k, formatEnvValue(v))
-		}
-	}
+	out, written := mergeEnvLinesIntoBuilder(lines, filtered)
+	appendMissingEnvKeys(out, filtered, written)
 
 	return os.WriteFile(path, []byte(strings.TrimSuffix(out.String(), "\n")+"\n"), 0o600)
 }
