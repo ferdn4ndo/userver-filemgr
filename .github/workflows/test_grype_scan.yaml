@@ -27,12 +27,12 @@ jobs:
       - name: Build Docker image
         run: >
           docker build
-          --file ./filemgr/Dockerfile
+          --file ./Dockerfile
           --tag userver-filemgr:local
           --build-arg BUILD_DATE=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
           --build-arg BUILD_VERSION=${{ github.sha }}
           --build-arg VCS_REF=${GITHUB_SHA}
-          ./filemgr
+          .
 
       - name: Scan image
         uses: anchore/scan-action@v7
@@ -47,7 +47,7 @@ jobs:
         with:
           sarif_file: ${{ steps.scan.outputs.sarif }}
 
-      # Do not fail the job on findings: Alpine/python base images often report CVEs before fixes ship.
+      # Do not fail the job on findings: base images often report CVEs before fixes ship.
       - name: Summarize Grype results
         id: grype_summary
         run: |
