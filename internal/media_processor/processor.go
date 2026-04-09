@@ -103,7 +103,7 @@ func (p *Processor) Process(ctx context.Context, job *data.MediaJob) error {
 	}
 	switch MediaCategory(f) {
 	case "IMAGE":
-		return p.processImage(ctx, stType, st.Credentials, f)
+		return p.processImage(ctx, stType, st.Credentials, st.MediaConvertConfiguration, f)
 	case "VIDEO":
 		return p.processVideo(ctx, stType, st.Credentials, f)
 	case "DOCUMENT":
@@ -113,7 +113,7 @@ func (p *Processor) Process(ctx context.Context, job *data.MediaJob) error {
 	}
 }
 
-func (p *Processor) processImage(ctx context.Context, stType string, creds []byte, f *data.StorageFile) error {
+func (p *Processor) processImage(ctx context.Context, stType string, creds []byte, mediaCfg json.RawMessage, f *data.StorageFile) error {
 	be, err := p.objects.ForStorage(stType, creds)
 	if err != nil {
 		return err
@@ -177,6 +177,64 @@ func (p *Processor) processImage(ctx context.Context, stType string, creds []byt
 	}
 	if err := data.InsertStorageMediaImageTx(ctx, tx, imgRow, f.CreatedByID); err != nil {
 		return err
+	}
+
+	sizes, err := parseImageResizerSizes(mediaCfg)
+	if err != nil {
+		return fmt.Errorf("media_convert_configuration.image_resizer: %w", err)
+	}
+	for _, box := range sizes {
+		rw, rh := computeNewImageDimensions(w, h, box.W, box.H)
+		if w < rw || h < rh {
+			continue
+		}
+		resized := imaging.Resize(img, rw, rh, imaging.Lanczos)
+		var bout bytes.Buffer
+		if err := imaging.Encode(&bout, resized, imaging.JPEG, imaging.JPEGQuality(jpegQualityResized)); err != nil {
+			return err
+		}
+		tid := uuid.New()
+		sizeTag := sizeTagFromDimensions(rw, rh)
+		vpath := "/" + tid.String() + "/resized_" + strings.ToLower(sizeTag) + ".jpg"
+		real := strings.TrimPrefix(vpath, "/")
+		sfile := &data.StorageFile{
+			ID:             tid,
+			SignatureKey:   randomSig(),
+			StorageID:      f.StorageID,
+			OwnerID:        f.OwnerID,
+			Name:           sql.NullString{String: sizeTag + "_resized.jpg", Valid: true},
+			Status:         "PUBLISHED",
+			Visibility:     f.Visibility,
+			Size:           int64(bout.Len()),
+			Extension:      sql.NullString{String: "jpg", Valid: true},
+			Origin:         "DERIVED",
+			VirtualPath:    sql.NullString{String: vpath, Valid: true},
+			RealPath:       sql.NullString{String: real, Valid: true},
+			Available:      true,
+			Excluded:       false,
+			CreatedByID:    f.CreatedByID,
+			TypeID:         jpegType,
+			ExifMetadata:   f.ExifMetadata,
+			CustomMetadata: f.CustomMetadata,
+		}
+		if err := p.db.InsertFileTx(ctx, tx, sfile); err != nil {
+			return err
+		}
+		if err := be.Put(ctx, real, bytes.NewReader(bout.Bytes()), int64(bout.Len()), "image/jpeg"); err != nil {
+			return err
+		}
+		szRow := &data.MediaImageSized{
+			ID:            uuid.New(),
+			SizeTag:       sql.NullString{String: sizeTag, Valid: true},
+			Height:        sql.NullInt64{Int64: int64(rh), Valid: true},
+			Width:         sql.NullInt64{Int64: int64(rw), Valid: true},
+			Megapixels:    sql.NullString{String: fmt.Sprintf("%.4f", float64(rw*rh)/1e6), Valid: true},
+			MediaImageID:  imageRowID,
+			StorageFileID: tid,
+		}
+		if err := data.InsertStorageMediaImageSizedTx(ctx, tx, szRow, f.CreatedByID); err != nil {
+			return err
+		}
 	}
 
 	for _, spec := range thumbSpecs {

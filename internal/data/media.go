@@ -31,27 +31,42 @@ type StorageMedia struct {
 	Thumbnails    []MediaThumbRow `json:"thumbnails,omitempty"`
 }
 
+// MediaImageSized is a derived JPEG linked from core_storagemediaimagesized (legacy Django image resizer).
+type MediaImageSized struct {
+	ID            uuid.UUID      `db:"id" json:"id"`
+	CreatedAt     time.Time      `db:"created_at" json:"created_at"`
+	UpdatedAt     sql.NullTime   `db:"updated_at" json:"updated_at,omitempty"`
+	SizeTag       sql.NullString `db:"size_tag" json:"size_tag"`
+	Height        sql.NullInt64  `db:"height" json:"height"`
+	Width         sql.NullInt64  `db:"width" json:"width"`
+	Megapixels    sql.NullString `db:"megapixels" json:"megapixels"`
+	MediaImageID  uuid.UUID      `db:"media_image_id" json:"media_image"`
+	StorageFileID uuid.UUID      `db:"storage_file_id" json:"storage_file"`
+	File          *StorageFile   `json:"storage_file_detail,omitempty"`
+}
+
 type MediaImage struct {
-	ID                  uuid.UUID      `db:"id" json:"id"`
-	CreatedAt           time.Time      `db:"created_at" json:"created_at"`
-	UpdatedAt           sql.NullTime   `db:"updated_at" json:"updated_at,omitempty"`
-	FocalLength         sql.NullFloat64 `db:"focal_length" json:"focal_length"`
-	Aperture            sql.NullString `db:"aperture" json:"aperture"`
-	FlashFired          sql.NullBool   `db:"flash_fired" json:"flash_fired"`
-	ISO                 sql.NullInt64  `db:"iso" json:"iso"`
-	OrientationAngle    sql.NullInt64  `db:"orientation_angle" json:"orientation_angle"`
-	IsFlipped           sql.NullBool   `db:"is_flipped" json:"is_flipped"`
-	Exposition          sql.NullString `db:"exposition" json:"exposition"`
-	DatetimeTaken       sql.NullString `db:"datetime_taken" json:"datetime_taken"`
-	CameraManufacturer  sql.NullString `db:"camera_manufacturer" json:"camera_manufacturer"`
-	CameraModel         sql.NullString `db:"camera_model" json:"camera_model"`
-	ExifImageHeight     sql.NullInt64  `db:"exif_image_height" json:"exif_image_height"`
-	ExifImageWidth      sql.NullInt64  `db:"exif_image_width" json:"exif_image_width"`
-	SizeTag             sql.NullString `db:"size_tag" json:"size_tag"`
-	Height              sql.NullInt64  `db:"height" json:"height"`
-	Width               sql.NullInt64  `db:"width" json:"width"`
-	Megapixels          sql.NullString `db:"megapixels" json:"megapixels"`
-	MediaID             uuid.UUID      `db:"media_id" json:"media"`
+	ID                 uuid.UUID            `db:"id" json:"id"`
+	CreatedAt          time.Time            `db:"created_at" json:"created_at"`
+	UpdatedAt          sql.NullTime         `db:"updated_at" json:"updated_at,omitempty"`
+	FocalLength        sql.NullFloat64      `db:"focal_length" json:"focal_length"`
+	Aperture           sql.NullString       `db:"aperture" json:"aperture"`
+	FlashFired         sql.NullBool         `db:"flash_fired" json:"flash_fired"`
+	ISO                sql.NullInt64        `db:"iso" json:"iso"`
+	OrientationAngle   sql.NullInt64        `db:"orientation_angle" json:"orientation_angle"`
+	IsFlipped          sql.NullBool         `db:"is_flipped" json:"is_flipped"`
+	Exposition         sql.NullString       `db:"exposition" json:"exposition"`
+	DatetimeTaken      sql.NullString       `db:"datetime_taken" json:"datetime_taken"`
+	CameraManufacturer sql.NullString       `db:"camera_manufacturer" json:"camera_manufacturer"`
+	CameraModel        sql.NullString       `db:"camera_model" json:"camera_model"`
+	ExifImageHeight    sql.NullInt64        `db:"exif_image_height" json:"exif_image_height"`
+	ExifImageWidth     sql.NullInt64        `db:"exif_image_width" json:"exif_image_width"`
+	SizeTag            sql.NullString       `db:"size_tag" json:"size_tag"`
+	Height             sql.NullInt64        `db:"height" json:"height"`
+	Width              sql.NullInt64        `db:"width" json:"width"`
+	Megapixels         sql.NullString       `db:"megapixels" json:"megapixels"`
+	MediaID            uuid.UUID            `db:"media_id" json:"media"`
+	SizedImages        []MediaImageSized `json:"sized_images,omitempty" db:"-"`
 }
 
 type MediaVideo struct {
@@ -68,25 +83,25 @@ type MediaVideo struct {
 }
 
 type MediaDocument struct {
-	ID            uuid.UUID    `db:"id" json:"id"`
-	CreatedAt     time.Time    `db:"created_at" json:"created_at"`
-	UpdatedAt     sql.NullTime `db:"updated_at" json:"updated_at,omitempty"`
+	ID            uuid.UUID     `db:"id" json:"id"`
+	CreatedAt     time.Time     `db:"created_at" json:"created_at"`
+	UpdatedAt     sql.NullTime  `db:"updated_at" json:"updated_at,omitempty"`
 	Pages         sql.NullInt64 `db:"pages" json:"pages"`
-	BlackAndWhite bool         `db:"black_and_white" json:"black_and_white"`
-	MediaID       uuid.UUID    `db:"media_id" json:"media"`
+	BlackAndWhite bool          `db:"black_and_white" json:"black_and_white"`
+	MediaID       uuid.UUID     `db:"media_id" json:"media"`
 }
 
 type MediaThumbRow struct {
-	ID            uuid.UUID    `db:"id" json:"id"`
-	CreatedAt     time.Time    `db:"created_at" json:"created_at"`
-	UpdatedAt     sql.NullTime `db:"updated_at" json:"updated_at,omitempty"`
-	SizeTag       string       `db:"size_tag" json:"size_tag"`
-	Height        sql.NullInt64 `db:"height" json:"height"`
-	Width         sql.NullInt64 `db:"width" json:"width"`
+	ID            uuid.UUID      `db:"id" json:"id"`
+	CreatedAt     time.Time      `db:"created_at" json:"created_at"`
+	UpdatedAt     sql.NullTime   `db:"updated_at" json:"updated_at,omitempty"`
+	SizeTag       string         `db:"size_tag" json:"size_tag"`
+	Height        sql.NullInt64  `db:"height" json:"height"`
+	Width         sql.NullInt64  `db:"width" json:"width"`
 	Megapixels    sql.NullString `db:"megapixels" json:"megapixels"`
-	MediaID       uuid.UUID    `db:"media_id" json:"media"`
-	StorageFileID uuid.UUID    `db:"storage_file_id" json:"storage_file"`
-	File          *StorageFile `json:"storage_file_detail,omitempty"`
+	MediaID       uuid.UUID      `db:"media_id" json:"media"`
+	StorageFileID uuid.UUID      `db:"storage_file_id" json:"storage_file"`
+	File          *StorageFile   `json:"storage_file_detail,omitempty"`
 }
 
 // ListStorageMedia lists media rows for a storage with the same visibility rules as files.
@@ -187,6 +202,19 @@ func (d *DB) GetStorageMedia(ctx context.Context, storageID, mediaID uuid.UUID, 
 				size_tag, height, width, megapixels, media_id
 			FROM core_storagemediaimage WHERE media_id = $1`, m.ID); err == nil {
 			m.Image = &img
+			var sized []MediaImageSized
+			if err := d.db.SelectContext(ctx, &sized, `
+				SELECT id, created_at, updated_at, size_tag, height, width, megapixels, media_image_id, storage_file_id
+				FROM core_storagemediaimagesized WHERE media_image_id = $1 ORDER BY width DESC NULLS LAST, height DESC NULLS LAST`, img.ID); err == nil {
+				for i := range sized {
+					tf, err := d.loadFileRow(ctx, storageID, sized[i].StorageFileID, false)
+					if err == nil {
+						ef2, _ := d.enrichFile(ctx, *tf)
+						sized[i].File = ef2
+					}
+				}
+				m.Image.SizedImages = sized
+			}
 		}
 	case "VIDEO":
 		var v MediaVideo
@@ -312,6 +340,17 @@ func InsertStorageMediaDocumentTx(ctx context.Context, tx *sqlx.Tx, doc *MediaDo
 		INSERT INTO core_storagemediadocument (id, created_at, pages, black_and_white, media_id, created_by_id)
 		VALUES ($1, NOW(), $2, $3, $4, NULL)`,
 		doc.ID, nullInt64(doc.Pages), doc.BlackAndWhite, doc.MediaID)
+	return err
+}
+
+// InsertStorageMediaImageSizedTx links a resized image file to core_storagemediaimage.
+func InsertStorageMediaImageSizedTx(ctx context.Context, tx *sqlx.Tx, row *MediaImageSized, createdBy uuid.NullUUID) error {
+	_, err := tx.ExecContext(ctx, `
+		INSERT INTO core_storagemediaimagesized (
+			id, created_at, size_tag, height, width, megapixels, media_image_id, storage_file_id, created_by_id
+		) VALUES ($1, NOW(), $2, $3, $4, $5, $6, $7, $8)`,
+		row.ID, nullStr(row.SizeTag), nullInt64(row.Height), nullInt64(row.Width), nullNumericString(row.Megapixels),
+		row.MediaImageID, row.StorageFileID, uuidOrNull(createdBy))
 	return err
 }
 
