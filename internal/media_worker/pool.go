@@ -2,6 +2,7 @@ package media_worker
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"time"
 
@@ -90,12 +91,27 @@ func (p *Pool) loop(workerID int) {
 			}
 			continue
 		}
-		if err := p.proc.Process(ctx, job); err != nil {
-			_ = p.db.FailMediaJob(context.Background(), job.ID, err.Error())
-			p.log.Warnw("media job failed", "worker", workerID, "job", job.ID.String(), "err", err.Error())
+		err = runProcessWithRecover(p.proc.Process, ctx, job, workerID, p.log)
+		if err != nil {
+			msg := err.Error()
+			if len(msg) > 8000 {
+				msg = msg[:8000]
+			}
+			_ = p.db.FailMediaJob(context.Background(), job.ID, msg)
+			p.log.Warnw("media job failed", "worker", workerID, "job", job.ID.String(), "err", msg)
 		} else {
 			_ = p.db.CompleteMediaJob(context.Background(), job.ID)
 		}
 		cancel()
 	}
+}
+
+func runProcessWithRecover(process func(context.Context, *data.MediaJob) error, ctx context.Context, job *data.MediaJob, workerID int, log lib.Logger) (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("panic in media process: %v", r)
+			log.Errorw("media worker panic recovered", "worker", workerID, "job", job.ID.String(), "panic", fmt.Sprintf("%v", r))
+		}
+	}()
+	return process(ctx, job)
 }

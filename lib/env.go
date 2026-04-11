@@ -19,6 +19,11 @@ type Env struct {
 	DBUser            string
 	DBPassword        string
 	DBName            string
+	DBSSLMode         string
+	DBMaxOpenConns    int
+	DBMaxIdleConns    int
+	DBConnMaxIdleTime time.Duration
+	DBConnMaxLifetime time.Duration
 	AuthHost          string
 	AuthHTTPTimeout   time.Duration
 	LocalRoot         string
@@ -26,6 +31,23 @@ type Env struct {
 	PublicBaseURL     string
 	TrustedProxyCIDRs string
 	CorsDebug         bool
+	// CORS: comma-separated origins; empty = allow any origin ("*") for backward compatibility.
+	CorsAllowedOrigins string
+	// Security headers
+	SecurityEnableHSTS bool
+	// Rate limiting (per client IP)
+	RateLimitEnabled        bool
+	RateLimitRPS            float64
+	RateLimitBurst          int
+	RateLimitUploadURLRPS   float64
+	RateLimitUploadURLBurst int
+	// Audit log for sensitive actions (no secrets / no raw tokens)
+	AuditLogEnabled bool
+	// URL fetch (upload-from-url): SSRF protection and limits
+	URLFetchMaxBytes     int64
+	URLFetchTimeout      time.Duration
+	URLFetchAllowHTTP    bool
+	URLFetchMaxRedirects int
 	// Media worker (in-process; PostgreSQL queue).
 	MediaProcessingEnabled  bool
 	MediaWorkerCount        int
@@ -76,6 +98,64 @@ func NewEnv() Env {
 		authTimeoutSecs = 120
 	}
 	authHost := strings.TrimRight(getenvFirstNonEmpty([]string{"USERVER_AUTH_HOST", "AUTH_HOST"}, ""), "/")
+
+	dbMaxOpen, _ := strconv.Atoi(getenvDefault("DB_MAX_OPEN_CONNS", "25"))
+	if dbMaxOpen <= 0 {
+		dbMaxOpen = 25
+	}
+	dbMaxIdle, _ := strconv.Atoi(getenvDefault("DB_MAX_IDLE_CONNS", "10"))
+	if dbMaxIdle < 0 {
+		dbMaxIdle = 0
+	}
+	dbIdleSecs, _ := strconv.Atoi(getenvDefault("DB_CONN_MAX_IDLE_SECS", "90"))
+	if dbIdleSecs < 0 {
+		dbIdleSecs = 90
+	}
+	dbLifeSecs, _ := strconv.Atoi(getenvDefault("DB_CONN_MAX_LIFETIME_SECS", "0"))
+	var dbConnMaxLife time.Duration
+	if dbLifeSecs > 0 {
+		dbConnMaxLife = time.Duration(dbLifeSecs) * time.Second
+	}
+
+	rps, _ := strconv.ParseFloat(getenvDefault("RATE_LIMIT_RPS", "30"), 64)
+	if rps <= 0 {
+		rps = 30
+	}
+	burst, _ := strconv.Atoi(getenvDefault("RATE_LIMIT_BURST", "60"))
+	if burst <= 0 {
+		burst = 60
+	}
+	urlRPS, _ := strconv.ParseFloat(getenvDefault("RATE_LIMIT_UPLOAD_URL_RPS", "5"), 64)
+	if urlRPS <= 0 {
+		urlRPS = 5
+	}
+	urlBurst, _ := strconv.Atoi(getenvDefault("RATE_LIMIT_UPLOAD_URL_BURST", "10"))
+	if urlBurst <= 0 {
+		urlBurst = 10
+	}
+
+	urlMax, _ := strconv.ParseInt(getenvDefault("URL_FETCH_MAX_BYTES", fmt.Sprintf("%d", 512<<20)), 10, 64)
+	if urlMax <= 0 {
+		urlMax = 512 << 20
+	}
+	urlTimeoutSecs, _ := strconv.Atoi(getenvDefault("URL_FETCH_TIMEOUT_SECS", "120"))
+	if urlTimeoutSecs < 5 {
+		urlTimeoutSecs = 5
+	}
+	if urlTimeoutSecs > 600 {
+		urlTimeoutSecs = 600
+	}
+	urlRedirects, _ := strconv.Atoi(getenvDefault("URL_FETCH_MAX_REDIRECTS", "8"))
+	if urlRedirects < 0 {
+		urlRedirects = 0
+	}
+	if urlRedirects > 20 {
+		urlRedirects = 20
+	}
+
+	rateOn := !strings.EqualFold(strings.TrimSpace(os.Getenv("RATE_LIMIT_ENABLED")), "0") &&
+		!strings.EqualFold(strings.TrimSpace(os.Getenv("RATE_LIMIT_ENABLED")), "false")
+
 	return Env{
 		ServerPort:        port,
 		EnvMode:           getenvDefault("ENV_MODE", "development"),
@@ -85,6 +165,11 @@ func NewEnv() Env {
 		DBUser:            os.Getenv("POSTGRES_USER"),
 		DBPassword:        os.Getenv("POSTGRES_PASS"),
 		DBName:            os.Getenv("POSTGRES_DB"),
+		DBSSLMode:         strings.TrimSpace(os.Getenv("POSTGRES_SSLMODE")),
+		DBMaxOpenConns:    dbMaxOpen,
+		DBMaxIdleConns:    dbMaxIdle,
+		DBConnMaxIdleTime: time.Duration(dbIdleSecs) * time.Second,
+		DBConnMaxLifetime: dbConnMaxLife,
 		AuthHost:          authHost,
 		AuthHTTPTimeout:   time.Duration(authTimeoutSecs) * time.Second,
 		LocalRoot:         getenvFirstNonEmpty([]string{"LOCAL_STORAGE_ROOT", "LOCAL_TEST_STORAGE_ROOT"}, "/storages/local"),
@@ -93,6 +178,21 @@ func NewEnv() Env {
 		TrustedProxyCIDRs: os.Getenv("TRUSTED_PROXY_CIDRS"),
 		CorsDebug: strings.EqualFold(strings.TrimSpace(os.Getenv("CORS_DEBUG")), "1") ||
 			strings.EqualFold(strings.TrimSpace(os.Getenv("CORS_DEBUG")), "true"),
+		CorsAllowedOrigins: strings.TrimSpace(os.Getenv("CORS_ALLOWED_ORIGINS")),
+		SecurityEnableHSTS: strings.EqualFold(strings.TrimSpace(os.Getenv("SECURITY_ENABLE_HSTS")), "1") ||
+			strings.EqualFold(strings.TrimSpace(os.Getenv("SECURITY_ENABLE_HSTS")), "true"),
+		RateLimitEnabled:        rateOn,
+		RateLimitRPS:            rps,
+		RateLimitBurst:          burst,
+		RateLimitUploadURLRPS:   urlRPS,
+		RateLimitUploadURLBurst: urlBurst,
+		AuditLogEnabled: !strings.EqualFold(strings.TrimSpace(os.Getenv("AUDIT_LOG_ENABLED")), "0") &&
+			!strings.EqualFold(strings.TrimSpace(os.Getenv("AUDIT_LOG_ENABLED")), "false"),
+		URLFetchMaxBytes: urlMax,
+		URLFetchTimeout:  time.Duration(urlTimeoutSecs) * time.Second,
+		URLFetchAllowHTTP: strings.EqualFold(strings.TrimSpace(os.Getenv("URL_FETCH_ALLOW_HTTP")), "1") ||
+			strings.EqualFold(strings.TrimSpace(os.Getenv("URL_FETCH_ALLOW_HTTP")), "true"),
+		URLFetchMaxRedirects: urlRedirects,
 		MediaProcessingEnabled: !strings.EqualFold(strings.TrimSpace(os.Getenv("MEDIA_PROCESSING_ENABLED")), "0") &&
 			!strings.EqualFold(strings.TrimSpace(os.Getenv("MEDIA_PROCESSING_ENABLED")), "false"),
 		MediaWorkerCount:        mediaWorkers,

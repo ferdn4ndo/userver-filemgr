@@ -31,6 +31,15 @@ Copy `.env.template` to `.env` and adjust:
 | `LOCAL_STORAGE_ROOT` | Default root for `LOCAL` storages |
 | `APP_PUBLIC_BASE_URL` | Optional absolute base for local download URLs |
 | `DOWNLOAD_EXP_BYTES_SECS_RATIO` | Size-based TTL for download links (legacy formula) |
+| `POSTGRES_SSLMODE` | Postgres TLS mode (`disable`, `require`, `verify-full`, …). If unset: `disable` when `ENV_MODE` is not `prod`, else `require`. |
+| `DB_MAX_OPEN_CONNS`, `DB_MAX_IDLE_CONNS`, `DB_CONN_MAX_IDLE_SECS`, `DB_CONN_MAX_LIFETIME_SECS` | Connection pool sizing (see `.env.template`). |
+| `CORS_ALLOWED_ORIGINS` | Comma-separated allowed browser origins. Empty keeps legacy behaviour (`*`). |
+| `SECURITY_ENABLE_HSTS` | If `1`/`true`, sends `Strict-Transport-Security` when the request is HTTPS or `X-Forwarded-Proto: https`. |
+| `RATE_LIMIT_*`, `RATE_LIMIT_UPLOAD_URL_*`, `RATE_LIMIT_ENABLED` | Per-client-IP token buckets for the API and a stricter bucket for `upload-from-url`. |
+| `AUDIT_LOG_ENABLED` | Structured `audit` log lines for storage, file, and storage-user mutations (no secrets or tokens). |
+| `URL_FETCH_*` | Limits and SSRF policy for `POST .../upload-from-url` (HTTPS only unless `URL_FETCH_ALLOW_HTTP=1`). |
+
+Use TLS between clients and the reverse proxy, from the proxy to the app where applicable, and from the app to Postgres (`POSTGRES_SSLMODE`) and to cloud object storage. The service never logs `Authorization` headers or storage credentials.
 
 ## Run with Docker Compose
 

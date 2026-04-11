@@ -22,35 +22,53 @@ import (
 	"github.com/ferdn4ndo/userver-filemgr/internal/download_exp"
 	"github.com/ferdn4ndo/userver-filemgr/internal/media_processor"
 	"github.com/ferdn4ndo/userver-filemgr/internal/object_store"
+	"github.com/ferdn4ndo/userver-filemgr/internal/urlfetch"
 	"github.com/ferdn4ndo/userver-filemgr/lib"
 )
 
 // Router wires HTTP routes (legacy /storages/* paths).
 type Router struct {
-	env     lib.Env
-	gin     *gin.Engine
-	db      *data.DB
-	authz   *auth.Service
-	objects *object_store.Factory
+	env      lib.Env
+	gin      *gin.Engine
+	db       *data.DB
+	authz    *auth.Service
+	objects  *object_store.Factory
+	urlFetch *urlfetch.Client
+	log      lib.Logger
+	globalRL *ipRateLimiter
+	urlRL    *ipRateLimiter
 }
 
-func NewRouter(handler lib.RequestHandler, env lib.Env, db *data.DB, az *auth.Service, ob *object_store.Factory) *Router {
-	return &Router{gin: handler.Gin, env: env, db: db, authz: az, objects: ob}
+func NewRouter(handler lib.RequestHandler, env lib.Env, logger lib.Logger, db *data.DB, az *auth.Service, ob *object_store.Factory, fetch *urlfetch.Client) *Router {
+	return &Router{
+		gin:      handler.Gin,
+		env:      env,
+		db:       db,
+		authz:    az,
+		objects:  ob,
+		urlFetch: fetch,
+		log:      logger,
+		globalRL: newIPRateLimiter(env.RateLimitEnabled, env.RateLimitRPS, env.RateLimitBurst),
+		urlRL:    newIPRateLimiter(env.RateLimitEnabled, env.RateLimitUploadURLRPS, env.RateLimitUploadURLBurst),
+	}
 }
 
 func (r *Router) Register() {
 	g := r.gin
+	origins, allowCreds := corsOptionsFromEnv(r.env)
 	g.Use(corsgin.New(cors.Options{
-		AllowedOrigins:   []string{"*"},
+		AllowedOrigins:   origins,
 		AllowedMethods:   []string{"GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS", "HEAD"},
 		AllowedHeaders:   []string{"*"},
-		AllowCredentials: false,
+		AllowCredentials: allowCreds,
 		Debug:            r.env.CorsDebug,
 	}))
+	g.Use(securityHeadersMiddleware(r.env))
 
 	g.GET("/healthz", func(c *gin.Context) { c.String(http.StatusOK, "ok") })
 
 	needAuth := g.Group("")
+	needAuth.Use(rateLimitMiddleware(r.globalRL))
 	needAuth.Use(r.authenticateMiddleware)
 
 	needAuth.GET("/storages", r.listStorages)
@@ -77,7 +95,7 @@ func (r *Router) Register() {
 	needAuth.DELETE("/storages/:storageID/users/:userRowID", r.deleteStorageUser)
 
 	needAuth.POST("/storages/:storageID/upload-from-file", r.uploadMultipart)
-	needAuth.POST("/storages/:storageID/upload-from-url", r.uploadFromURL)
+	needAuth.POST("/storages/:storageID/upload-from-url", rateLimitMiddleware(r.urlRL), r.uploadFromURL)
 
 	needAuth.GET("/storages/:storageID/files/:fileID/raw/:downloadID", r.streamDownload)
 
@@ -160,6 +178,7 @@ func (r *Router) createStorage(c *gin.Context) {
 		return
 	}
 	st.Credentials = nil
+	r.audit(c, "storage.create", "storage_id", st.ID.String())
 	c.JSON(http.StatusOK, st)
 }
 
@@ -241,6 +260,11 @@ func (r *Router) writeStorage(c *gin.Context, requireCreds bool) {
 		return
 	}
 	st.Credentials = nil
+	if requireCreds {
+		r.audit(c, "storage.update", "storage_id", sid.String())
+	} else {
+		r.audit(c, "storage.patch", "storage_id", sid.String())
+	}
 	c.JSON(http.StatusOK, st)
 }
 
@@ -263,6 +287,7 @@ func (r *Router) deleteStorage(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"detail": err.Error()})
 		return
 	}
+	r.audit(c, "storage.delete", "storage_id", sid.String())
 	c.Status(http.StatusNoContent)
 }
 
@@ -405,6 +430,7 @@ func (r *Router) deleteFile(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"detail": err.Error()})
 		return
 	}
+	r.audit(c, "file.soft_delete", "storage_id", sid.String(), "file_id", fid.String())
 	c.Status(http.StatusNoContent)
 }
 
@@ -478,6 +504,7 @@ func (r *Router) permaDelete(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"detail": err.Error()})
 		return
 	}
+	r.audit(c, "file.perma_delete", "storage_id", sid.String(), "file_id", fid.String())
 	c.Status(http.StatusNoContent)
 }
 
@@ -632,6 +659,7 @@ func (r *Router) createStorageUser(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"detail": err.Error()})
 		return
 	}
+	r.audit(c, "storage_user.create", "storage_id", sid.String(), "subject_user_id", body.UserID.String())
 	c.JSON(http.StatusCreated, row)
 }
 
@@ -711,6 +739,7 @@ func (r *Router) deleteStorageUser(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"detail": "not found"})
 		return
 	}
+	r.audit(c, "storage_user.delete", "storage_id", sid.String(), "row_id", rid.String())
 	c.Status(http.StatusNoContent)
 }
 
@@ -771,6 +800,7 @@ func (r *Router) uploadMultipart(c *gin.Context) {
 	}
 	be, err := r.objects.ForStorage(st.Type.String, st.Credentials)
 	if err != nil {
+		r.rollbackUploadingFile(c.Request.Context(), st, frow)
 		c.JSON(http.StatusInternalServerError, gin.H{"detail": err.Error()})
 		return
 	}
@@ -779,10 +809,15 @@ func (r *Router) uploadMultipart(c *gin.Context) {
 		ct = "application/octet-stream"
 	}
 	if err := be.Put(c.Request.Context(), real, src, fh.Size, ct); err != nil {
+		r.rollbackUploadingFile(c.Request.Context(), st, frow)
 		c.JSON(http.StatusInternalServerError, gin.H{"detail": err.Error()})
 		return
 	}
-	_ = r.db.UpdateFilePathsAndStatus(c.Request.Context(), id, "PUBLISHED", fh.Size, real, vpath, "", mimeID)
+	if err := r.db.UpdateFilePathsAndStatus(c.Request.Context(), id, "PUBLISHED", fh.Size, real, vpath, "", mimeID); err != nil {
+		r.rollbackUploadingFile(c.Request.Context(), st, frow)
+		c.JSON(http.StatusInternalServerError, gin.H{"detail": err.Error()})
+		return
+	}
 	out, _ := r.db.GetFile(c.Request.Context(), sid, id, false, true, u.ID)
 	r.maybeEnqueueMedia(c.Request.Context(), sid, out)
 	c.JSON(http.StatusCreated, out)
@@ -811,16 +846,22 @@ func (r *Router) uploadFromURL(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"detail": "storage not found"})
 		return
 	}
-	buf, ct, ok := r.fetchURLUploadBody(c, body.URL)
-	if !ok {
-		return
-	}
 	ext := extensionFromSourceURL(body.URL)
 	frow, ok := r.newUploadingFileFromURL(c, u, sid, body.URL, ext)
 	if !ok {
 		return
 	}
-	r.putBufferedAndPublishURLUpload(c, st, frow, buf, ct, sid, u)
+	resp, err := r.urlFetch.Get(c.Request.Context(), body.URL)
+	if err != nil {
+		r.rollbackUploadingFile(c.Request.Context(), st, frow)
+		if errors.Is(err, urlfetch.ErrURLNotAllowed) {
+			c.JSON(http.StatusBadRequest, gin.H{"detail": "url not allowed"})
+			return
+		}
+		c.JSON(http.StatusBadGateway, gin.H{"detail": "failed to fetch url"})
+		return
+	}
+	r.putStreamURLUpload(c, st, frow, resp, sid, u)
 }
 
 func (r *Router) parseSF(c *gin.Context) (uuid.UUID, uuid.UUID, bool) {

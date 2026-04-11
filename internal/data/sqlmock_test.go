@@ -50,3 +50,19 @@ func TestFindMimeByExtension_sqlmock(t *testing.T) {
 	assert.Equal(t, "image/jpeg", mt.MimeType)
 	assert.NoError(t, mock.ExpectationsWereMet())
 }
+
+func TestDeleteFailedUploadingFile_sqlmock(t *testing.T) {
+	sqldb, mock, err := sqlmock.New()
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = sqldb.Close() })
+	db := &DB{db: sqlx.NewDb(sqldb, "postgres")}
+	sid := uuid.MustParse("550e8400-e29b-41d4-a716-446655440000")
+	fid := uuid.MustParse("550e8400-e29b-41d4-a716-446655440001")
+
+	mock.ExpectExec(regexp.QuoteMeta(`DELETE FROM core_storagefile WHERE storage_id = $1 AND id = $2 AND status = 'UPLOADING'`)).
+		WithArgs(sid, fid).
+		WillReturnResult(sqlmock.NewResult(0, 1))
+
+	require.NoError(t, db.DeleteFailedUploadingFile(context.Background(), sid, fid))
+	assert.NoError(t, mock.ExpectationsWereMet())
+}

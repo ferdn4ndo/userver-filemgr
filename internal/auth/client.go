@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/ferdn4ndo/userver-filemgr/lib"
 )
 
 // MeResponse is a subset of uServer-Auth /auth/me JSON.
@@ -36,13 +38,15 @@ func NewClient(baseURL string, timeout time.Duration) *Client {
 	if timeout <= 0 {
 		timeout = 15 * time.Second
 	}
+	tr := lib.NewPooledTransport()
 	if baseURL == "" {
-		return &Client{httpClient: &http.Client{Timeout: timeout}}
+		return &Client{httpClient: &http.Client{Timeout: timeout, Transport: tr}}
 	}
 	return &Client{
 		baseURL: strings.TrimRight(baseURL, "/"),
 		httpClient: &http.Client{
-			Timeout: timeout,
+			Timeout:   timeout,
+			Transport: tr,
 		},
 	}
 }

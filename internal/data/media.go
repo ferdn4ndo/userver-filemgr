@@ -46,26 +46,26 @@ type MediaImageSized struct {
 }
 
 type MediaImage struct {
-	ID                 uuid.UUID            `db:"id" json:"id"`
-	CreatedAt          time.Time            `db:"created_at" json:"created_at"`
-	UpdatedAt          sql.NullTime         `db:"updated_at" json:"updated_at,omitempty"`
-	FocalLength        sql.NullFloat64      `db:"focal_length" json:"focal_length"`
-	Aperture           sql.NullString       `db:"aperture" json:"aperture"`
-	FlashFired         sql.NullBool         `db:"flash_fired" json:"flash_fired"`
-	ISO                sql.NullInt64        `db:"iso" json:"iso"`
-	OrientationAngle   sql.NullInt64        `db:"orientation_angle" json:"orientation_angle"`
-	IsFlipped          sql.NullBool         `db:"is_flipped" json:"is_flipped"`
-	Exposition         sql.NullString       `db:"exposition" json:"exposition"`
-	DatetimeTaken      sql.NullString       `db:"datetime_taken" json:"datetime_taken"`
-	CameraManufacturer sql.NullString       `db:"camera_manufacturer" json:"camera_manufacturer"`
-	CameraModel        sql.NullString       `db:"camera_model" json:"camera_model"`
-	ExifImageHeight    sql.NullInt64        `db:"exif_image_height" json:"exif_image_height"`
-	ExifImageWidth     sql.NullInt64        `db:"exif_image_width" json:"exif_image_width"`
-	SizeTag            sql.NullString       `db:"size_tag" json:"size_tag"`
-	Height             sql.NullInt64        `db:"height" json:"height"`
-	Width              sql.NullInt64        `db:"width" json:"width"`
-	Megapixels         sql.NullString       `db:"megapixels" json:"megapixels"`
-	MediaID            uuid.UUID            `db:"media_id" json:"media"`
+	ID                 uuid.UUID         `db:"id" json:"id"`
+	CreatedAt          time.Time         `db:"created_at" json:"created_at"`
+	UpdatedAt          sql.NullTime      `db:"updated_at" json:"updated_at,omitempty"`
+	FocalLength        sql.NullFloat64   `db:"focal_length" json:"focal_length"`
+	Aperture           sql.NullString    `db:"aperture" json:"aperture"`
+	FlashFired         sql.NullBool      `db:"flash_fired" json:"flash_fired"`
+	ISO                sql.NullInt64     `db:"iso" json:"iso"`
+	OrientationAngle   sql.NullInt64     `db:"orientation_angle" json:"orientation_angle"`
+	IsFlipped          sql.NullBool      `db:"is_flipped" json:"is_flipped"`
+	Exposition         sql.NullString    `db:"exposition" json:"exposition"`
+	DatetimeTaken      sql.NullString    `db:"datetime_taken" json:"datetime_taken"`
+	CameraManufacturer sql.NullString    `db:"camera_manufacturer" json:"camera_manufacturer"`
+	CameraModel        sql.NullString    `db:"camera_model" json:"camera_model"`
+	ExifImageHeight    sql.NullInt64     `db:"exif_image_height" json:"exif_image_height"`
+	ExifImageWidth     sql.NullInt64     `db:"exif_image_width" json:"exif_image_width"`
+	SizeTag            sql.NullString    `db:"size_tag" json:"size_tag"`
+	Height             sql.NullInt64     `db:"height" json:"height"`
+	Width              sql.NullInt64     `db:"width" json:"width"`
+	Megapixels         sql.NullString    `db:"megapixels" json:"megapixels"`
+	MediaID            uuid.UUID         `db:"media_id" json:"media"`
 	SizedImages        []MediaImageSized `json:"sized_images,omitempty" db:"-"`
 }
 

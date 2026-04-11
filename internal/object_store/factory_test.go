@@ -39,6 +39,8 @@ func TestFactoryForStorageLocal(t *testing.T) {
 	require.NoError(t, err)
 	err = be.Put(context.Background(), "k", strings.NewReader("x"), 1, "")
 	assert.NoError(t, err)
+	err = be.Put(context.Background(), "k2", strings.NewReader("yz"), -1, "")
+	assert.NoError(t, err)
 }
 
 func TestFactoryForStorageUnknown(t *testing.T) {

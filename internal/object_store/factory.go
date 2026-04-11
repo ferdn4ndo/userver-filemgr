@@ -12,6 +12,7 @@ import (
 
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/credentials"
+	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 
 	"github.com/ferdn4ndo/userver-filemgr/lib"
@@ -67,7 +68,8 @@ func (f *Factory) ForStorage(storageType string, credsJSON []byte) (Backend, err
 		}
 		client := s3.NewFromConfig(cfg)
 		presign := s3.NewPresignClient(client)
-		return &s3Backend{bucket: c.Bucket, root: strings.Trim(c.RootFolder, "/"), client: client, presign: presign}, nil
+		up := manager.NewUploader(client)
+		return &s3Backend{bucket: c.Bucket, root: strings.Trim(c.RootFolder, "/"), client: client, presign: presign, uploader: up}, nil
 	default:
 		return nil, fmt.Errorf("unsupported storage type %q", storageType)
 	}
@@ -91,11 +93,17 @@ func (l *localBackend) Put(ctx context.Context, realPath string, r io.Reader, si
 	if err != nil {
 		return err
 	}
-	defer f.Close()
-	if _, err := io.Copy(f, r); err != nil {
-		return err
+	_, copyErr := io.Copy(f, r)
+	closeErr := f.Close()
+	if copyErr != nil {
+		_ = os.Remove(p)
+		return copyErr
 	}
-	return f.Close()
+	if closeErr != nil {
+		_ = os.Remove(p)
+		return closeErr
+	}
+	return nil
 }
 
 func (l *localBackend) Delete(ctx context.Context, realPath string) error {
