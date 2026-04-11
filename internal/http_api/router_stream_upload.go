@@ -1,9 +1,7 @@
 package http_api
 
 import (
-	"bytes"
 	"database/sql"
-	"io"
 	"net/http"
 	"strings"
 
@@ -12,6 +10,7 @@ import (
 
 	"github.com/ferdn4ndo/userver-filemgr/internal/auth"
 	"github.com/ferdn4ndo/userver-filemgr/internal/data"
+	"github.com/ferdn4ndo/userver-filemgr/internal/urlfetch"
 )
 
 func (r *Router) streamDownloadParseIDs(c *gin.Context) (did, sid, fid uuid.UUID, ok bool) {
@@ -72,34 +71,6 @@ func streamDownloadAttachmentName(f *data.StorageFile) string {
 	return "file"
 }
 
-func (r *Router) fetchURLUploadBody(c *gin.Context, rawURL string) (buf []byte, contentType string, ok bool) {
-	req, err := http.NewRequestWithContext(c.Request.Context(), http.MethodGet, rawURL, nil)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"detail": err.Error()})
-		return nil, "", false
-	}
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil || resp.StatusCode != http.StatusOK {
-		if resp != nil {
-			resp.Body.Close()
-		}
-		c.JSON(http.StatusBadGateway, gin.H{"detail": "failed to fetch url"})
-		return nil, "", false
-	}
-	defer resp.Body.Close()
-	ct := resp.Header.Get("Content-Type")
-	if ct == "" {
-		ct = "application/octet-stream"
-	}
-	lim := io.LimitReader(resp.Body, 512<<20)
-	buf, err = io.ReadAll(lim)
-	if err != nil {
-		c.JSON(http.StatusBadGateway, gin.H{"detail": err.Error()})
-		return nil, "", false
-	}
-	return buf, ct, true
-}
-
 func extensionFromSourceURL(sourceURL string) string {
 	ext := "bin"
 	if i := strings.LastIndex(sourceURL, "."); i >= 0 {
@@ -136,19 +107,37 @@ func (r *Router) newUploadingFileFromURL(c *gin.Context, u *auth.User, sid uuid.
 	return frow, true
 }
 
-func (r *Router) putBufferedAndPublishURLUpload(c *gin.Context, st *data.Storage, frow *data.StorageFile, buf []byte, ct string, sid uuid.UUID, u *auth.User) bool {
+// putStreamURLUpload streams resp.Body into object storage (no full in-memory buffer) and publishes the file row.
+func (r *Router) putStreamURLUpload(c *gin.Context, st *data.Storage, frow *data.StorageFile, resp *http.Response, sid uuid.UUID, u *auth.User) bool {
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		r.rollbackUploadingFile(c.Request.Context(), st, frow)
+		c.JSON(http.StatusBadGateway, gin.H{"detail": "failed to fetch url"})
+		return false
+	}
+	ct := resp.Header.Get("Content-Type")
+	if ct == "" {
+		ct = "application/octet-stream"
+	}
 	be, err := r.objects.ForStorage(st.Type.String, st.Credentials)
 	if err != nil {
+		r.rollbackUploadingFile(c.Request.Context(), st, frow)
 		c.JSON(http.StatusInternalServerError, gin.H{"detail": err.Error()})
 		return false
 	}
 	real := frow.RealPath.String
 	vpath := frow.VirtualPath.String
-	if err := be.Put(c.Request.Context(), real, bytes.NewReader(buf), int64(len(buf)), ct); err != nil {
+	cr := &urlfetch.CappedReader{R: resp.Body, Max: r.env.URLFetchMaxBytes}
+	if err := be.Put(c.Request.Context(), real, cr, -1, ct); err != nil {
+		r.rollbackUploadingFile(c.Request.Context(), st, frow)
 		c.JSON(http.StatusInternalServerError, gin.H{"detail": err.Error()})
 		return false
 	}
-	_ = r.db.UpdateFilePathsAndStatus(c.Request.Context(), frow.ID, "PUBLISHED", int64(len(buf)), real, vpath, "", frow.TypeID)
+	if err := r.db.UpdateFilePathsAndStatus(c.Request.Context(), frow.ID, "PUBLISHED", cr.N, real, vpath, "", frow.TypeID); err != nil {
+		r.rollbackUploadingFile(c.Request.Context(), st, frow)
+		c.JSON(http.StatusInternalServerError, gin.H{"detail": err.Error()})
+		return false
+	}
 	out, _ := r.db.GetFile(c.Request.Context(), sid, frow.ID, false, true, u.ID)
 	r.maybeEnqueueMedia(c.Request.Context(), sid, out)
 	c.JSON(http.StatusCreated, out)

@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"fmt"
 	"net/url"
-	"time"
 
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
@@ -31,9 +30,13 @@ func (d Database) StdDB() *sql.DB {
 func NewDatabase(env Env, logger Logger, lc fx.Lifecycle) Database {
 	dbUser := url.QueryEscape(env.DBUser)
 	dbPass := url.QueryEscape(env.DBPassword)
-	sslMode := "disable"
-	if !env.IsLocal() {
-		sslMode = "require"
+	sslMode := env.DBSSLMode
+	if sslMode == "" {
+		if env.IsProduction() {
+			sslMode = "require"
+		} else {
+			sslMode = "disable"
+		}
 	}
 	dsn := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=%s",
 		dbUser, dbPass, env.DBHost, env.DBPort, env.DBName, sslMode)
@@ -41,14 +44,17 @@ func NewDatabase(env Env, logger Logger, lc fx.Lifecycle) Database {
 	if err != nil {
 		logger.Panic(err)
 	}
-	db.SetMaxOpenConns(25)
-	db.SetConnMaxIdleTime(90 * time.Second)
-	db.SetMaxIdleConns(5)
+	db.SetMaxOpenConns(env.DBMaxOpenConns)
+	db.SetConnMaxIdleTime(env.DBConnMaxIdleTime)
+	db.SetMaxIdleConns(env.DBMaxIdleConns)
+	if env.DBConnMaxLifetime > 0 {
+		db.SetConnMaxLifetime(env.DBConnMaxLifetime)
+	}
 
 	lc.Append(fx.StopHook(func(ctx context.Context) error {
 		return db.Close()
 	}))
 
-	logger.Info("Database connection established")
+	logger.Info("Database connection established (sslmode=" + sslMode + ")")
 	return Database{DB: db}
 }

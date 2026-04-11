@@ -28,6 +28,13 @@ Typical deployment:
 - **PostgreSQL** holds all metadata (users mirrored from Auth, storages, files, permissions, download rows).
 - **S3** or a **mounted volume** holds object bytes; credentials live in `core_storage.credentials` (JSON).
 
+## Security and performance notes
+
+- **upload-from-url** streams the remote response into object storage (no full in-memory copy) using a dedicated HTTP client with bounded redirects, timeouts, and SSRF checks (private/link-local addresses are rejected when `ENV_MODE=prod`; loopback is allowed in non-production for local testing).
+- **Outbound HTTP** to uServer-Auth uses a pooled transport with idle connection limits.
+- **PostgreSQL** pool size and `sslmode` are configurable; optional indexes from migration `000003_query_indexes` speed up common file listings and download expiry scans.
+- **CORS**, **security headers** (including optional HSTS), **per-IP rate limits**, and **audit** logging for administrative mutations are configured via environment variables (see `.env.template` and README).
+
 ## HTTP surface
 
 - `GET /healthz` — liveness (no auth).

@@ -1,0 +1,2 @@
+DROP INDEX IF EXISTS core_storagefiledownload_expires_idx;
+DROP INDEX IF EXISTS core_storagefile_storage_excluded_created_idx;

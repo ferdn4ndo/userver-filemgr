@@ -8,14 +8,16 @@ import (
 	"strings"
 	"time"
 
+	"github.com/aws/aws-sdk-go-v2/feature/s3/manager"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 )
 
 type s3Backend struct {
-	bucket  string
-	root    string
-	client  *s3.Client
-	presign *s3.PresignClient
+	bucket   string
+	root     string
+	client   *s3.Client
+	presign  *s3.PresignClient
+	uploader *manager.Uploader
 }
 
 func (s *s3Backend) key(realPath string) string {
@@ -35,7 +37,14 @@ func (s *s3Backend) Put(ctx context.Context, realPath string, r io.Reader, size 
 	if contentType != "" {
 		in.ContentType = &contentType
 	}
-	_, err := s.client.PutObject(ctx, in)
+	// Negative size: stream of unknown length (multipart upload).
+	if size >= 0 {
+		cl := size
+		in.ContentLength = &cl
+		_, err := s.client.PutObject(ctx, in)
+		return err
+	}
+	_, err := s.uploader.Upload(ctx, in)
 	return err
 }
 

@@ -6,6 +6,7 @@ require (
 	github.com/DATA-DOG/go-sqlmock v1.5.2
 	github.com/aws/aws-sdk-go-v2/config v1.32.14
 	github.com/aws/aws-sdk-go-v2/credentials v1.19.14
+	github.com/aws/aws-sdk-go-v2/feature/s3/manager v1.20.4
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.99.0
 	github.com/disintegration/imaging v1.6.2
 	github.com/gin-gonic/gin v1.12.0
@@ -21,6 +22,7 @@ require (
 	github.com/stretchr/testify v1.11.1
 	go.uber.org/fx v1.24.0
 	go.uber.org/zap v1.27.1
+	golang.org/x/time v0.14.0
 )
 
 require (

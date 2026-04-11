@@ -9,6 +9,7 @@ import (
 	"github.com/ferdn4ndo/userver-filemgr/internal/media_processor"
 	"github.com/ferdn4ndo/userver-filemgr/internal/media_worker"
 	"github.com/ferdn4ndo/userver-filemgr/internal/object_store"
+	"github.com/ferdn4ndo/userver-filemgr/internal/urlfetch"
 	"github.com/ferdn4ndo/userver-filemgr/lib"
 )
 
@@ -21,5 +22,6 @@ var CommonModules = fx.Options(
 	fx.Provide(media_processor.NewProcessor),
 	fx.Provide(media_worker.NewPool),
 	fx.Invoke(media_worker.Register),
+	fx.Provide(urlfetch.NewClient),
 	fx.Provide(http_api.NewRouter),
 )

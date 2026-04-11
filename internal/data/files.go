@@ -258,6 +258,21 @@ func (d *DB) UpdateFilePathsAndStatus(ctx context.Context, fileID uuid.UUID, sta
 	return err
 }
 
+// DeleteFailedUploadingFile removes a row that never completed upload (UPLOADING only). Used to roll back failed uploads.
+func (d *DB) DeleteFailedUploadingFile(ctx context.Context, storageID, fileID uuid.UUID) error {
+	res, err := d.db.ExecContext(ctx, `
+		DELETE FROM core_storagefile WHERE storage_id = $1 AND id = $2 AND status = 'UPLOADING'`,
+		storageID, fileID)
+	if err != nil {
+		return err
+	}
+	n, _ := res.RowsAffected()
+	if n == 0 {
+		return sql.ErrNoRows
+	}
+	return nil
+}
+
 func nullStr(ns sql.NullString) any {
 	if !ns.Valid {
 		return nil
