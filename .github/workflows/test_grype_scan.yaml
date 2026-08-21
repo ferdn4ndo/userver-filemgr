@@ -66,11 +66,11 @@ jobs:
             echo ""
             echo "**${n}** finding(s) in image \`userver-filemgr:local\` (built in this workflow). Full **SARIF** is available under **Security** for this repo."
             echo ""
-            jq -r '(.runs[0].results // [])[] |
+            jq -r '(.runs[0].results // [])[0:60][] |
               "- **" + (.ruleId // "unknown") + "** (`" + (.level // "?") + "`): "
               + ((.message.text // "no message") | gsub("\n"; " ")
               | if length > 220 then .[0:217] + "..." else . end)
-            ' "$sarif" | head -60
+            ' "$sarif"
             if [ "$n" -gt 60 ]; then
               echo ""
               echo "_…and $((n - 60)) more (see Code scanning / SARIF)._"
